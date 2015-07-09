@@ -9,8 +9,6 @@
 
 namespace tmb {
    template <class A>
-   class FunctorWrapper;
-   template <class A>
    class Node : public Subject, public Observer {
      protected:
       /**
@@ -28,23 +26,22 @@ namespace tmb {
        * Please note that we store a functor which returns a ref to a value
        * using a function which is used to compute it. Since the function will
        * have arguments we will use a functorWrapper which will bind the
-       *different
-       * arguments to certain variables or to other Nodes
+       * different arguments to certain variables or to other Nodes
        */
-      std::vector<Loki::SmartPtr<FunctorWrapper<A&> > > _vec_functors;
+      std::vector<Loki::SmartPtr<Loki::Functor<A> > > _vec_functors;
 
       /**
        * @brief This functor points to the get_solved function which just
        * returns
        *        the value
        */
-      Loki::SmartPtr<FunctorWrapper<A&> > _get_solved;
+      Loki::SmartPtr<Loki::Functor<A> > _get_solved;
       /**
        * @brief Reference to the functor that will be called when get function
        * is
        *        called.
        */
-      Loki::SmartPtr<FunctorWrapper<A&> >* _active_get;
+      Loki::SmartPtr<Loki::Functor<A> >* _active_get;
 
       /**
        * @brief   This function just returns the value of the variable
@@ -68,7 +65,7 @@ namespace tmb {
       /**
        * @brief   Add a strategy to the vector of functors for this node
        */
-      void addStrategy(Loki::SmartPtr<FunctorWrapper<A&> > strategy);
+      void addStrategy(Loki::SmartPtr<Loki::Functor<A> > strategy);
 
       Node(std::string name);
       Node(const Node<A>& copy_from);

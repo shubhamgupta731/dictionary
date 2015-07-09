@@ -18,7 +18,7 @@ A& tmb::Node<A>::set(B val) {
 }
 
 template <class A>
-void tmb::Node<A>::addStrategy(Loki::SmartPtr<FunctorWrapper<A&> > strategy) {
+void tmb::Node<A>::addStrategy(Loki::SmartPtr<Loki::Functor<A> > strategy) {
    _vec_functors.push_back(strategy);
 }
 

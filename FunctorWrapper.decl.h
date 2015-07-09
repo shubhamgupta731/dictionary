@@ -3,9 +3,23 @@
 
 #include "loki/Functor.h"
 #include "loki/HierarchyGenerators.h"
-#include "CustomLokiFunctions.decl.h"
 
 namespace tmb {
+   template <class List>
+   struct RemoveReferenceAndConst;
+   ;
+   template <class Head, class Tail>
+   struct RemoveReferenceAndConst<Loki::Typelist<Head, Tail> > {
+      typedef Head Type;
+      typedef Loki::Typelist<
+          typename Loki::TypeTraits<
+              typename Loki::TypeTraits<Type>::ReferredType>::NonConstType,
+          typename RemoveReferenceAndConst<Tail>::List> List;
+   };
+   template <>
+   struct RemoveReferenceAndConst<Loki::NullType> {
+      typedef Loki::NullType List;
+   };
    /**
     * @class      : CreateFunctorPointerList
     * @brief This Class takes a typelist as a template parameter
@@ -24,14 +38,15 @@ namespace tmb {
     */
    template <class Head, class Tail>
    struct CreateFunctorPointerList<Loki::Typelist<Head, Tail> > {
-      typedef Loki::Typelist<Loki::Functor<Head> *,
+      typedef Head Type;
+      typedef Loki::Typelist<Loki::Functor<Type> *,
                              typename CreateFunctorPointerList<Tail>::List>
           List;
    };
 
    /**
     * @class      : CreateFunctorPointerList
-    * @brief This class is used to end the recursion metaprogramming 
+    * @brief This class is used to end the recursion metaprogramming
     *        algorithm being used to create a functor pointer list
     *        using each elment of a given typelist.
     */
@@ -98,7 +113,9 @@ namespace tmb {
     *               we call the functor specified in _func. This is especially
     *               useful in dictionaries
     */
-   template <class Return, class Tlist, class PropertiesType = Tlist>
+   template <class Return,
+             class Tlist = Loki::NullType,
+             class PropertiesType = Tlist>
    struct FunctorWrapper {
      public:
       /**
@@ -123,7 +140,7 @@ namespace tmb {
        *          calling each element of _arg_functors and storing the result
        *          in this tuple.
        */
-      Loki::Tuple<Tlist> _tuple_args;
+      Loki::Tuple<typename RemoveReferenceAndConst<Tlist>::List> _tuple_args;
       /**
        * @brief Tuple of functors which are going to be used to compute the
        *        arguments.
@@ -132,8 +149,7 @@ namespace tmb {
        *          value in _tuple_args as the _func_no_args has arguments
        *          bound to the elements inside _tuple_args.
        */
-      Loki::Tuple<typename CreateFunctorPointerList<Tlist>::List> &
-          _arg_functors;
+      Loki::Tuple<typename CreateFunctorPointerList<Tlist>::List> _arg_functors;
 
       typedef Return ResultType;
       typedef Tlist ListArgs;
@@ -147,7 +163,7 @@ namespace tmb {
 
       template <class Tlist_args, int N>
       struct IterateOverArgs {
-         static Loki::Functor<Return> &doF(
+         static Loki::Functor<Return> doF(
              FunctorWrapper &obj,
              Loki::Functor<ResultType, Tlist_args> &func_original,
              Loki::Tuple<typename CreateFunctorPointerList<Tlist>::List> &
@@ -156,7 +172,7 @@ namespace tmb {
 
       template <class Head, class Tail, int N>
       struct IterateOverArgs<Loki::Typelist<Head, Tail>, N> {
-         static Loki::Functor<Return> &doF(
+         static Loki::Functor<Return> doF(
              FunctorWrapper &obj,
              Loki::Functor<ResultType, Loki::Typelist<Head, Tail> > &
                  func_original,
@@ -166,7 +182,7 @@ namespace tmb {
 
       template <class Tail, int N>
       struct IterateOverArgs<Loki::Typelist<Tail, Loki::NullType>, N> {
-         static Loki::Functor<Return> &doF(
+         static Loki::Functor<Return> doF(
              FunctorWrapper &obj,
              Loki::Functor<ResultType, Loki::Typelist<Tail, Loki::NullType> > &
                  func_original,
@@ -176,14 +192,30 @@ namespace tmb {
 
       template <int N>
       struct IterateOverArgs<Loki::NullType, N> {
-         static Loki::Functor<Return> &doF(
+         static Loki::Functor<Return> doF(
              FunctorWrapper &obj,
              Loki::Functor<ResultType> &func_original,
              Loki::Tuple<typename CreateFunctorPointerList<Tlist>::List> &
                  tuple_functors);
       };
 
+      template <int N, class flag = Loki::Int2Type<1> >
+      struct LoopOverTuple {
+         static void doF(FunctorWrapper &obj);
+      };
+
+      template <int N>
+      struct LoopOverTuple<N, Loki::Int2Type<0> > {
+         static void doF(FunctorWrapper &obj);
+      };
+
       operator ResultType();
    };
+
+   template <class A>
+   A return_val(A val);
+
+   template <class A>
+   Loki::Functor<A> *wrap_var_with_functor(A val);
 }
 #endif
