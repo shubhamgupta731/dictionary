@@ -217,5 +217,8 @@ namespace tmb {
 
    template <class A>
    Loki::Functor<A> *wrap_var_with_functor(A val);
+
+   template <class A>
+   Loki::Functor<A> *wrap_var_with_functor<Node<A>*>(A val);
 }
 #endif

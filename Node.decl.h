@@ -6,11 +6,59 @@
 #include "loki/SmartPtr.h"
 #include "Subject.decl.h"
 #include "Observer.decl.h"
+#include "Typelist.decl.h"
 
+/**
+ * @class      : HAS_TYPEDEF
+ * @brief      : This macro will be used to check if a class has a particular
+ * typedef or not. A tutorial can be found in
+ * $TRANSATMB_DIR/examples/HAS_TYPEDEF_HAS_MEM_FUNC_tutorial.cxx to see an
+ * example of how it works.
+ * @param typedef_name : Name of Typedef
+ * @param name  : Name of struct which is going to be run the test for
+ * the given particular typedef specified in typedef_name
+ */
+#define HAS_TYPEDEF(typedef_name, name)                               \
+   template <typename T>                                              \
+   struct name {                                                      \
+      typedef char yes[1];                                            \
+      typedef char no[2];                                             \
+      template <typename U>                                           \
+      struct type_check;                                              \
+      template <typename _1>                                          \
+      static yes& chk(type_check<typename _1::typedef_name>*);        \
+      template <typename>                                             \
+      static no& chk(...);                                            \
+      template <bool has_typedef, class _1>                           \
+      struct holder {                                                 \
+         typedef Loki::Typelist<Loki::NullType, Loki::NullType> type; \
+      };                                                              \
+      template <class _1>                                             \
+      struct holder<true, _1> {                                       \
+         typedef typename _1::typedef_name type;                      \
+      };                                                              \
+      static bool const Result = sizeof(chk<T>(0)) == sizeof(yes);    \
+   }
 namespace tmb {
+   HAS_TYPEDEF(isANode, has_is_a_node);
    template <class A>
-   class Node : public Subject, public Observer {
+   class Node;
+
+   template <class A>
+   class NodeObserver : public Observer {
      protected:
+      size_t _index;
+      Node<A>* _ptr;
+
+     public:
+      NodeObserver(size_t index, Node<A>* ptr);
+      void update();
+   };
+
+   template <class A>
+   class Node : public Subject {
+     protected:
+      typedef Loki::Int2Type<0> isANode;
       /**
        * @brief name - Name of the variable
        */
@@ -29,6 +77,14 @@ namespace tmb {
        * different arguments to certain variables or to other Nodes
        */
       std::vector<Loki::SmartPtr<Loki::Functor<A> > > _vec_functors;
+
+      /**
+       * @brief vector of observers
+       *
+       * The size of this vector should be equal to _vec_functors because
+       * each observer belongs to a strategy.
+       */
+      std::vector<Loki::SmartPtr<NodeObserver<A> > > _vec_observers;
 
       /**
        * @brief This functor points to the get_solved function which just
@@ -63,9 +119,18 @@ namespace tmb {
       A& set(B bal);
 
       /**
-       * @brief   Add a strategy to the vector of functors for this node
+       * @brief   Add a strategy which takes one argument
        */
-      void addStrategy(Loki::SmartPtr<Loki::Functor<A> > strategy);
+      template <class Arg1>
+      void addStrategy(Loki::Functor<A, TYPELIST(Arg1)>* functor, Arg1 arg1);
+
+      /**
+       * @brief   Add a strategy which takes two argument
+       */
+      template <class Arg1, class Arg2>
+      void addStrategy(Loki::Functor<A, TYPELIST(Arg1, Arg2)>* functor,
+                       Arg1 arg1,
+                       Arg2 arg2);
 
       Node(std::string name);
       Node(const Node<A>& copy_from);
