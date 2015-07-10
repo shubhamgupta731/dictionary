@@ -58,7 +58,6 @@ namespace tmb {
    template <class A>
    class Node : public Subject {
      protected:
-      typedef Loki::Int2Type<0> isANode;
       /**
        * @brief name - Name of the variable
        */
@@ -99,6 +98,11 @@ namespace tmb {
        */
       Loki::SmartPtr<Loki::Functor<A> >* _active_get;
 
+      Loki::SmartPtr<Loki::Functor<A> > _get_copy_func;
+      Loki::SmartPtr<Loki::Functor<A&> > _get_func;
+      Loki::SmartPtr<Loki::Functor<const A&> > _get_const_ref_func;
+      Loki::SmartPtr<Loki::Functor<A*> > _get_pointer_func;
+      Loki::SmartPtr<Loki::Functor<const A*> > _get_const_pointer_func;
       /**
        * @brief   This function just returns the value of the variable
        * @return  Value of the variable
@@ -106,11 +110,32 @@ namespace tmb {
       A& get_solved();
 
      public:
+      typedef Loki::Int2Type<0> isANode;
       /**
        * @brief   Calls the functor pointed by _active_get
        * @return  Value of the variable
        */
       A& get();
+      /**
+       * @brief   Calls the functor pointed by _active_get
+       * @return  Value of the variable
+       */
+      const A& get_const_ref();
+      /**
+       * @brief   Calls the functor pointed by _active_get
+       * @return  Value of the variable
+       */
+      A get_copy();
+      /**
+       * @brief   Calls the functor pointed by _active_get
+       * @return  Value of the variable
+       */
+      A* get_pointer();
+      /**
+       * @brief   Calls the functor pointed by _active_get
+       * @return  Value of the variable
+       */
+      const A* get_const_pointer();
       /**
        * @brief   Sets the value of the node
        * @return  Returns a reference to the value of the node
@@ -121,8 +146,8 @@ namespace tmb {
       /**
        * @brief   Add a strategy which takes one argument
        */
-      template <class Arg1>
-      void addStrategy(Loki::Functor<A, TYPELIST(Arg1)>* functor, Arg1 arg1);
+      template <class Arg1, class Arg2>
+      void addStrategy(Loki::Functor<A, TYPELIST(Arg1)>* functor, Arg2 arg1);
 
       /**
        * @brief   Add a strategy which takes two argument
@@ -132,8 +157,17 @@ namespace tmb {
                        Arg1 arg1,
                        Arg2 arg2);
 
+      const std::vector<Loki::SmartPtr<Loki::Functor<A> > >& get_vec_functors()
+          const;
+      void set_active_strategy(size_t index);
       Node(std::string name);
       Node(const Node<A>& copy_from);
+      Loki::Functor<A&>& get_get_func();
+      Loki::Functor<const A&>& get_const_ref_func();
+      Loki::Functor<A*>& get_pointer_func();
+      Loki::Functor<const A*>& get_const_pointer_func();
+      Loki::Functor<A>& get_copy_func();
+      operator A();
    };
 }
 #endif

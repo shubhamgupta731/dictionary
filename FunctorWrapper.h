@@ -511,10 +511,15 @@ namespace tmb {
    }
 
    template <class Return, class Tlist, class PropertiesType>
-   FunctorWrapper<Return, Tlist, PropertiesType>::operator ResultType() {
+   Return tmb::FunctorWrapper<Return, Tlist, PropertiesType>::return_val() {
       FunctorWrapper<Return, Tlist, PropertiesType>::LoopOverTuple<0>::doF(
           *this);
       return _func_no_args();
+   }
+   
+   template <class Return, class Tlist, class PropertiesType>
+   FunctorWrapper<Return, Tlist, PropertiesType>::operator ResultType() {
+      return return_val();
    }
 
    template <class Return, class Tlist, class PropertiesType>

@@ -208,6 +208,7 @@ namespace tmb {
       struct LoopOverTuple<N, Loki::Int2Type<0> > {
          static void doF(FunctorWrapper &obj);
       };
+      Return return_val();
 
       operator ResultType();
    };
@@ -217,8 +218,5 @@ namespace tmb {
 
    template <class A>
    Loki::Functor<A> *wrap_var_with_functor(A val);
-
-   template <class A>
-   Loki::Functor<A> *wrap_var_with_functor<Node<A>*>(A val);
 }
 #endif
