@@ -79,7 +79,8 @@ namespace tmb {
               tuple_from) {
          Loki::Field<N>(tuple_to) =
              new Loki::Functor<Head>(*(Loki::Field<N>(tuple_from)));
-         CopyFunctorPointersFromTuple<Tail, N + 1>::doF(tuple_to, tuple_from);
+         CopyFunctorPointersFromTuple<Tail, N + 1>::template doF<List>(
+             tuple_to, tuple_from);
       }
    };
 
@@ -93,6 +94,37 @@ namespace tmb {
               tuple_from) {
          Loki::Field<N>(tuple_to) =
              new Loki::Functor<Tail>(*(Loki::Field<N>(tuple_from)));
+      }
+   };
+
+   /**
+    * @class      : DeleteFunctorPointersFromTuple
+    * @brief This class is used to delete the tuple arguments from the stack
+    */
+   template <class Tlist, int N>
+   struct DeleteFunctorPointersFromTuple {
+      template <class List>
+      static void doF(
+          Loki::Tuple<typename CreateFunctorPointerList<List>::List> &tuple);
+   };
+
+   template <class Head, class Tail, int N>
+   struct DeleteFunctorPointersFromTuple<Loki::Typelist<Head, Tail>, N> {
+      template <class List>
+      static void doF(
+          Loki::Tuple<typename CreateFunctorPointerList<List>::List> &tuple) {
+         delete Loki::Field<N>(tuple);
+         DeleteFunctorPointersFromTuple<Tail, N + 1>::template doF<List>(tuple);
+      }
+   };
+
+   template <class Tail, int N>
+   struct DeleteFunctorPointersFromTuple<Loki::Typelist<Tail, Loki::NullType>,
+                                         N> {
+      template <class List>
+      static void doF(
+          Loki::Tuple<typename CreateFunctorPointerList<List>::List> &tuple) {
+         delete Loki::Field<N>(tuple);
       }
    };
 
@@ -211,6 +243,8 @@ namespace tmb {
       Return return_val();
 
       operator ResultType();
+
+      virtual ~FunctorWrapper();
    };
 
    template <class A>

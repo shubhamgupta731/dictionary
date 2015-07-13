@@ -463,7 +463,8 @@ namespace tmb {
            FunctorWrapper<ResultType, Tlist, PropertiesType>& obj,
            Loki::Functor<ResultType, Loki::Typelist<Head, Tail> >&
                func_original,
-           Loki::Tuple<typename CreateFunctorPointerList<Tlist>::List>&) {
+           Loki::Tuple<typename CreateFunctorPointerList<Tlist>::List>&
+               arg_functors) {
       typedef typename Loki::Select<
           Loki::TypeTraits<Head>::isConst,
           typename Loki::TypeTraits<Head>::NonConstType,
@@ -476,7 +477,8 @@ namespace tmb {
       Loki::Functor<ResultType, Tail> newfunc(
           tmb::BindFirstRef(func_original, *val));
       return FunctorWrapper<ResultType, Tlist, PropertiesType>::
-          template IterateOverArgs<Tail, N + 1>::doF(obj, newfunc);
+          template IterateOverArgs<Tail, N + 1>::doF(
+              obj, newfunc, arg_functors);
    }
 
    template <class Return, class Tlist, class PropertiesType>
@@ -516,7 +518,7 @@ namespace tmb {
           *this);
       return _func_no_args();
    }
-   
+
    template <class Return, class Tlist, class PropertiesType>
    FunctorWrapper<Return, Tlist, PropertiesType>::operator ResultType() {
       return return_val();
@@ -560,6 +562,12 @@ namespace tmb {
       }
       Loki::Functor<A, LOKI_TYPELIST_1(A)> func(&return_val<A>);
       return new Loki::Functor<A>(tmb::BindFirstRef(func, *ref_val));
+   }
+
+   template <class Return, class Tlist, class PropertiesType>
+   FunctorWrapper<Return, Tlist, PropertiesType>::~FunctorWrapper() {
+      tmb::DeleteFunctorPointersFromTuple<Tlist, 0>::template doF<Tlist>(
+          _arg_functors);
    }
 }
 

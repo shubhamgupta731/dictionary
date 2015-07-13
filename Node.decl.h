@@ -48,10 +48,11 @@ namespace tmb {
    class NodeObserver : public Observer {
      protected:
       size_t _index;
+      size_t _key;
       Node<A>* _ptr;
 
      public:
-      NodeObserver(size_t index, Node<A>* ptr);
+      NodeObserver(size_t index, size_t key, Node<A>* ptr);
       void update();
    };
 
@@ -65,7 +66,7 @@ namespace tmb {
       /**
        * @brief Value of the node
        */
-      A _val;
+      Loki::SmartPtr<A> _val;
 
       /**
        * @brief Vector of functors which to be used to compute the variable
@@ -76,6 +77,7 @@ namespace tmb {
        * different arguments to certain variables or to other Nodes
        */
       std::vector<Loki::SmartPtr<Loki::Functor<A> > > _vec_functors;
+      std::vector<std::vector<unsigned> > _vec_dependencies;
 
       /**
        * @brief vector of observers
@@ -146,20 +148,21 @@ namespace tmb {
       /**
        * @brief   Add a strategy which takes one argument
        */
-      template <class Arg1, class Arg2>
-      void addStrategy(Loki::Functor<A, TYPELIST(Arg1)>* functor, Arg2 arg1);
+      template <class Arg1, class Arg1_param>
+      void addStrategy(Loki::Functor<A, TYPELIST(Arg1)>* functor,
+                       Arg1_param arg1);
 
       /**
        * @brief   Add a strategy which takes two argument
        */
-      template <class Arg1, class Arg2>
+      template <class Arg1, class Arg2, class Arg1_param, class Arg2_param>
       void addStrategy(Loki::Functor<A, TYPELIST(Arg1, Arg2)>* functor,
-                       Arg1 arg1,
-                       Arg2 arg2);
+                       Arg1_param arg1,
+                       Arg2_param arg2);
 
       const std::vector<Loki::SmartPtr<Loki::Functor<A> > >& get_vec_functors()
           const;
-      void set_active_strategy(size_t index);
+      void set_active_strategy(size_t index, size_t key);
       Node(std::string name);
       Node(const Node<A>& copy_from);
       Loki::Functor<A&>& get_get_func();
@@ -167,6 +170,7 @@ namespace tmb {
       Loki::Functor<A*>& get_pointer_func();
       Loki::Functor<const A*>& get_const_pointer_func();
       Loki::Functor<A>& get_copy_func();
+      void reset_dependencies();
       operator A();
    };
 }
