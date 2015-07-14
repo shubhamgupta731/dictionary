@@ -57,6 +57,10 @@ namespace tmb {
    };
 
    template <class A>
+   void draw_dot_graph(tmb::Node<A>* node);
+
+   class BaseFunctorWrapper;
+   template <class A>
    class Node : public Subject {
      protected:
       /**
@@ -66,7 +70,7 @@ namespace tmb {
       /**
        * @brief Value of the node
        */
-      Loki::SmartPtr<A> _val;
+      A* _val;
 
       /**
        * @brief Vector of functors which to be used to compute the variable
@@ -76,35 +80,37 @@ namespace tmb {
        * have arguments we will use a functorWrapper which will bind the
        * different arguments to certain variables or to other Nodes
        */
-      std::vector<Loki::SmartPtr<Loki::Functor<A> > > _vec_functors;
+      std::vector<Loki::Functor<A>*> _vec_functors;
+      std::vector<Loki::Functor<std::vector<std::string> >*> _vec_functors_stream;
       std::vector<std::vector<unsigned> > _vec_dependencies;
+      std::vector<tmb::BaseFunctorWrapper*> _vec_functor_wrappers;
 
       /**
-       * @brief vector of observers
+       * @brief vector of subjects this variable depends on
        *
        * The size of this vector should be equal to _vec_functors because
        * each observer belongs to a strategy.
        */
-      std::vector<Loki::SmartPtr<NodeObserver<A> > > _vec_observers;
+      std::vector<std::vector<std::string> > _vec_subjects;
 
       /**
        * @brief This functor points to the get_solved function which just
        * returns
        *        the value
        */
-      Loki::SmartPtr<Loki::Functor<A> > _get_solved;
+      Loki::Functor<A>* _get_solved;
       /**
        * @brief Reference to the functor that will be called when get function
        * is
        *        called.
        */
-      Loki::SmartPtr<Loki::Functor<A> >* _active_get;
+      Loki::Functor<A>** _active_get;
 
-      Loki::SmartPtr<Loki::Functor<A> > _get_copy_func;
-      Loki::SmartPtr<Loki::Functor<A&> > _get_func;
-      Loki::SmartPtr<Loki::Functor<const A&> > _get_const_ref_func;
-      Loki::SmartPtr<Loki::Functor<A*> > _get_pointer_func;
-      Loki::SmartPtr<Loki::Functor<const A*> > _get_const_pointer_func;
+      Loki::Functor<A>* _get_copy_func;
+      Loki::Functor<A&>* _get_func;
+      Loki::Functor<const A&>* _get_const_ref_func;
+      Loki::Functor<A*>* _get_pointer_func;
+      Loki::Functor<const A*>* _get_const_pointer_func;
       /**
        * @brief   This function just returns the value of the variable
        * @return  Value of the variable
@@ -160,8 +166,7 @@ namespace tmb {
                        Arg1_param arg1,
                        Arg2_param arg2);
 
-      const std::vector<Loki::SmartPtr<Loki::Functor<A> > >& get_vec_functors()
-          const;
+      const std::vector<Loki::Functor<A>*>& get_vec_functors() const;
       void set_active_strategy(size_t index, size_t key);
       Node(std::string name);
       Node(const Node<A>& copy_from);
@@ -170,8 +175,12 @@ namespace tmb {
       Loki::Functor<A*>& get_pointer_func();
       Loki::Functor<const A*>& get_const_pointer_func();
       Loki::Functor<A>& get_copy_func();
+      const std::vector<std::vector<std::string> >& vector_of_strings() const;
+      std::vector<std::vector<std::string> > val_of_functor_wrappers();
       void reset_dependencies();
       operator A();
+      ~Node();
+      std::string& get_name();
    };
 }
 #endif

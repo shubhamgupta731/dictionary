@@ -128,6 +128,10 @@ namespace tmb {
       }
    };
 
+   class BaseFunctorWrapper {
+      public:
+         virtual ~BaseFunctorWrapper() {}
+   };
    /**
     * @class      : FunctorWrapper
     * @brief      : FunctorWrappers are used to wrap functors which take
@@ -148,7 +152,7 @@ namespace tmb {
    template <class Return,
              class Tlist = Loki::NullType,
              class PropertiesType = Tlist>
-   struct FunctorWrapper {
+   struct FunctorWrapper: public BaseFunctorWrapper {
      public:
       /**
        * @brief Pointer to the functor which is being wrapped
@@ -182,6 +186,8 @@ namespace tmb {
        *          bound to the elements inside _tuple_args.
        */
       Loki::Tuple<typename CreateFunctorPointerList<Tlist>::List> _arg_functors;
+
+      std::vector<std::string> args_as_stream();
 
       typedef Return ResultType;
       typedef Tlist ListArgs;

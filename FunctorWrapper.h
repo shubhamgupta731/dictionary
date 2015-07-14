@@ -7,6 +7,7 @@
 #include "loki/HierarchyGenerators.h"
 #include "loki/Typelist.h"
 #include "loki/TypeTraits.h"
+#include <sstream>
 
 namespace tmb {
 
@@ -568,6 +569,41 @@ namespace tmb {
    FunctorWrapper<Return, Tlist, PropertiesType>::~FunctorWrapper() {
       tmb::DeleteFunctorPointersFromTuple<Tlist, 0>::template doF<Tlist>(
           _arg_functors);
+   }
+
+   template <class List, int N>
+   struct PutTupleFieldsInStream {
+      template <class A>
+      static void doF(Loki::Tuple<A>& tuple, std::vector<std::string>& stream);
+   };
+
+   template <class Head, class Tail, int N>
+   struct PutTupleFieldsInStream<Loki::Typelist<Head, Tail>, N> {
+      template <class A>
+      static void doF(Loki::Tuple<A>& tuple, std::vector<std::string>& stream) {
+         std::stringstream val_stream;
+         val_stream << Loki::Field<N>(tuple);
+         stream.push_back(val_stream.str());
+         PutTupleFieldsInStream<Tail, N + 1>::doF(tuple, stream);
+      }
+   };
+
+   template <class Tail, int N>
+   struct PutTupleFieldsInStream<Loki::Typelist<Tail, Loki::NullType>, N> {
+      template <class A>
+      static void doF(Loki::Tuple<A>& tuple, std::vector<std::string>& stream) {
+         std::stringstream val_stream;
+         val_stream << Loki::Field<N>(tuple);
+         stream.push_back(val_stream.str());
+      }
+   };
+
+   template <class Return, class Tlist, class PropertiesType>
+   std::vector<std::string>
+       tmb::FunctorWrapper<Return, Tlist, PropertiesType>::args_as_stream() {
+      std::vector<std::string> return_stream;
+      PutTupleFieldsInStream<Tlist, 0>::doF(_tuple_args, return_stream);
+      return return_stream;
    }
 }
 

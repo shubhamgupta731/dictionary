@@ -3,7 +3,14 @@
 #include "Node.decl.h"
 #include "FunctorWrapper.h"
 #include <iostream>
+#include <fstream>
 #include <numeric>
+#include <iterator>
+
+template <class A>
+std::string& tmb::Node<A>::get_name() {
+   return _name;
+}
 
 template <class A>
 A& tmb::Node<A>::get() {
@@ -25,7 +32,7 @@ A tmb::Node<A>::get_copy() {
 template <class A>
 A* tmb::Node<A>::get_pointer() {
    get();
-   return Loki::GetImpl(_val);
+   return _val;
 }
 
 template <class A>
@@ -64,16 +71,48 @@ tmb::Node<A>::Node(std::string name)
 
 template <class A>
 tmb::Node<A>::Node(const tmb::Node<A>& copy_from)
-    : _val(copy_from._val)
-    , _name(copy_from._name)
+    : _name(copy_from._name)
     , _vec_functors(copy_from._vec_functors)
-    , _active_get(copy_from._active_get)
-    , _get_solved(copy_from._get_solved)
-    , _get_func(copy_from._get_func)
-    , _get_copy_func(copy_from._get_copy_func)
-    , _get_const_ref_func(copy_from._get_const_ref_func)
-    , _get_pointer_func(copy_from._get_pointer_func)
-    , _get_const_pointer_func(copy_from._get_const_pointer_func) {}
+    , _vec_functors_stream(copy_from._vec_functors_stream)
+    , _active_get(copy_from._active_get) {
+   _get_solved = new Loki::Functor<A>(this, &Node<A>::get_solved);
+   _get_func = new Loki::Functor<A&>(this, &tmb::Node<A>::get);
+   _get_copy_func = new Loki::Functor<A>(this, &tmb::Node<A>::get_copy);
+   _get_const_ref_func =
+       new Loki::Functor<const A&>(this, &tmb::Node<A>::get_const_ref);
+   _get_pointer_func = new Loki::Functor<A*>(this, &tmb::Node<A>::get_pointer);
+   _get_const_pointer_func =
+       new Loki::Functor<const A*>(this, &tmb::Node<A>::get_const_pointer);
+   _val = new A();
+   *_val = *(copy_from._val);
+}
+
+template <class A>
+tmb::Node<A>::~Node() {
+   delete _val;
+   delete _get_solved;
+   delete _get_func;
+   delete _get_copy_func;
+   delete _get_const_ref_func;
+   delete _get_pointer_func;
+   delete _get_const_pointer_func;
+   for (typename std::vector<Loki::Functor<A>*>::iterator it =
+            _vec_functors.begin();
+        it != _vec_functors.end();
+        ++it)
+      delete (*it);
+   for (
+       typename std::vector<Loki::Functor<std::vector<std::string> >*>::iterator
+           it = _vec_functors_stream.begin();
+       it != _vec_functors_stream.end();
+       ++it)
+      delete (*it);
+   for (std::vector<tmb::BaseFunctorWrapper*>::iterator it =
+            _vec_functor_wrappers.begin();
+        it != _vec_functor_wrappers.end();
+        ++it)
+      delete (*it);
+}
 
 namespace tmb {
    template <bool flag>
@@ -138,6 +177,7 @@ namespace tmb {
       template <class Arg1, class Arg2>
       static void doF(Arg1 arg1, Arg2 arg2) {
          arg1->attach(arg2);
+         arg2->attachObserver(arg1);
       }
    };
 
@@ -145,6 +185,22 @@ namespace tmb {
    struct AddObserver<false> {
       template <class Arg1, class Arg2>
       static void doF(Arg1, Arg2) {}
+   };
+
+   template <bool flag>
+   struct AddNodeName {
+      template <class A>
+      static void doF(A arg1, std::vector<std::string>& vec_str) {
+         vec_str.push_back(arg1->get_name());
+      }
+   };
+
+   template <>
+   struct AddNodeName<false> {
+      template <class A>
+      static void doF(A, std::vector<std::string>& vec_str) {
+         vec_str.push_back("uknown");
+      }
    };
 }
 
@@ -160,11 +216,14 @@ void tmb::Node<A>::addStrategy(Loki::Functor<A, TYPELIST(Arg1)>* functor,
    Loki::Field<0>(tuple_args) =
        Wrap<has_is_a_node<Arg2Type>::Result>::template doF<Arg1, Arg2>(arg1);
 
-   Loki::SmartPtr<tmb::FunctorWrapper<A, TYPELIST(Arg1)> > wrap =
+   tmb::FunctorWrapper<A, TYPELIST(Arg1)>* wrap =
        new tmb::FunctorWrapper<A, TYPELIST(Arg1)>(*functor, tuple_args);
 
    _vec_functors.push_back(new Loki::Functor<A>(
        wrap, &tmb::FunctorWrapper<A, TYPELIST(Arg1)>::return_val));
+   _vec_functors_stream.push_back(new Loki::Functor<std::vector<std::string> >(
+       wrap, &tmb::FunctorWrapper<A, TYPELIST(Arg1)>::args_as_stream));
+   _vec_subjects.resize(_vec_subjects.size() + 1);
 
    _vec_dependencies.push_back(std::vector<unsigned>(1, 0));
 
@@ -174,6 +233,8 @@ void tmb::Node<A>::addStrategy(Loki::Functor<A, TYPELIST(Arg1)>* functor,
    // Check if arg1 is a subject or not?
    tmb::AddObserver<Loki::Conversion<Arg2Type, Subject>::exists>::template doF<
        Arg2>(arg1, observer);
+   tmb::AddNodeName<Loki::Conversion<Arg2Type, Subject>::exists>::template doF<
+       Arg2>(arg1, _vec_subjects.back());
    _active_get = &(_vec_functors.back());
 }
 
@@ -200,13 +261,18 @@ void tmb::Node<A>::addStrategy(Loki::Functor<A, TYPELIST(Arg1, Arg2)>* functor,
        Wrap<has_is_a_node<Arg2Type>::Result>::template doF<Arg2, Arg2_param>(
            arg2);
 
-   Loki::SmartPtr<tmb::FunctorWrapper<A, TYPELIST(Arg1, Arg2)> > wrap =
+   tmb::FunctorWrapper<A, TYPELIST(Arg1, Arg2)>* wrap =
        new tmb::FunctorWrapper<A, TYPELIST(Arg1, Arg2)>(*functor, tuple_args);
 
    _vec_functors.push_back(new Loki::Functor<A>(
        wrap, &tmb::FunctorWrapper<A, TYPELIST(Arg1, Arg2)>::return_val));
+   _vec_functors_stream.push_back(new Loki::Functor<std::vector<std::string> >(
+       wrap, &tmb::FunctorWrapper<A, TYPELIST(Arg1, Arg2)>::args_as_stream));
+   _vec_subjects.resize(_vec_subjects.size() + 1);
 
    _vec_dependencies.push_back(std::vector<unsigned>(2, 0));
+
+   _vec_functor_wrappers.push_back(wrap);
 
    // Add a new observer
    tmb::NodeObserver<A>* observer1 =
@@ -218,6 +284,11 @@ void tmb::Node<A>::addStrategy(Loki::Functor<A, TYPELIST(Arg1, Arg2)>* functor,
        Arg1_param>(arg1, observer1);
    tmb::AddObserver<Loki::Conversion<Arg2Type, Subject>::exists>::template doF<
        Arg2_param>(arg2, observer2);
+
+   tmb::AddNodeName<Loki::Conversion<Arg2Type, Subject>::exists>::template doF<
+       Arg1_param>(arg1, _vec_subjects.back());
+   tmb::AddNodeName<Loki::Conversion<Arg2Type, Subject>::exists>::template doF<
+       Arg2_param>(arg2, _vec_subjects.back());
    _active_get = &(_vec_functors.back());
 }
 
@@ -231,8 +302,7 @@ void tmb::NodeObserver<A>::update() {
 }
 
 template <class A>
-const std::vector<Loki::SmartPtr<Loki::Functor<A> > >&
-    tmb::Node<A>::get_vec_functors() const {
+const std::vector<Loki::Functor<A>*>& tmb::Node<A>::get_vec_functors() const {
    return _vec_functors;
 }
 
@@ -285,5 +355,43 @@ Loki::Functor<A*>& tmb::Node<A>::get_pointer_func() {
 template <class A>
 Loki::Functor<const A*>& tmb::Node<A>::get_const_pointer_func() {
    return *_get_const_pointer_func;
+}
+
+template <class A>
+void tmb::draw_dot_graph(tmb::Node<A>* node) {
+   std::ofstream fs;
+   fs.open("dependeny_graph.dot");
+   fs << "diagraph G {";
+   std::vector<std::vector<std::string> > functor_args_vals =
+       node->val_of_functor_wrappers();
+   unsigned count = 0;
+   for (unsigned i = 0; i < node->vector_of_strings().size(); ++i) {
+      std::vector<std::string>& tokens(functor_args_vals[i]);
+      for (unsigned j = 0; j < tokens.size(); ++j) {
+         fs << count << "\"[label=" << node->vector_of_strings()[i][j]
+            << " \\n";
+         fs << "value: " << tokens[j] << "\"";
+         fs << ",shape=\"rectangle\",style=filled,fillcolor=\"turquoise\"];"
+            << "\n";
+         ++count;
+      }
+   }
+   fs << "}";
+   fs.close();
+}
+
+template <class A>
+const std::vector<std::vector<std::string> >& tmb::Node<A>::vector_of_strings()
+    const {
+   return _vec_subjects;
+}
+
+template <class A>
+std::vector<std::vector<std::string> > tmb::Node<A>::val_of_functor_wrappers() {
+   std::vector<std::vector<std::string> > return_val;
+   for (unsigned i = 0; i < _vec_functors_stream.size(); ++i) {
+      return_val.push_back((*(_vec_functors_stream[i]))());
+   }
+   return return_val;
 }
 #endif
