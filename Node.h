@@ -361,19 +361,31 @@ template <class A>
 void tmb::draw_dot_graph(tmb::Node<A>* node) {
    std::ofstream fs;
    fs.open("dependeny_graph.dot");
-   fs << "diagraph G {";
+   fs << "digraph G {" << std::endl;
    std::vector<std::vector<std::string> > functor_args_vals =
        node->val_of_functor_wrappers();
    unsigned count = 0;
+   fs << count << "[label=\"" << node->get_name() << " \\n";
+   fs << "value: " << node->get() << "\"";
+   fs << ",shape=\"rectangle\",style=filled,fillcolor=\"turquoise\"];"
+      << "\n";
    for (unsigned i = 0; i < node->vector_of_strings().size(); ++i) {
       std::vector<std::string>& tokens(functor_args_vals[i]);
       for (unsigned j = 0; j < tokens.size(); ++j) {
-         fs << count << "\"[label=" << node->vector_of_strings()[i][j]
+         ++count;
+         fs << count << "[label=\"" << node->vector_of_strings()[i][j]
             << " \\n";
          fs << "value: " << tokens[j] << "\"";
          fs << ",shape=\"rectangle\",style=filled,fillcolor=\"turquoise\"];"
             << "\n";
+      }
+   }
+   count = 0;
+   for (unsigned i = 0; i < node->vector_of_strings().size(); ++i) {
+      std::vector<std::string>& tokens(functor_args_vals[i]);
+      for (unsigned j = 0; j < tokens.size(); ++j) {
          ++count;
+         fs << "0->" << count << ";" << std::endl;
       }
    }
    fs << "}";
