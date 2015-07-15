@@ -6,11 +6,7 @@
 #include <fstream>
 #include <numeric>
 #include <iterator>
-
-template <class A>
-std::string& tmb::Node<A>::get_name() {
-   return _name;
-}
+#include "loki/Typelist.h"
 
 template <class A>
 A& tmb::Node<A>::get() {
@@ -55,8 +51,7 @@ A& tmb::Node<A>::get_solved() {
 }
 
 template <class A>
-tmb::Node<A>::Node(std::string name)
-    : _active_get(NULL) {
+tmb::Node<A>::Node(std::string name) {
    _name = name;
    _get_solved = new Loki::Functor<A>(this, &Node<A>::get_solved);
    _get_func = new Loki::Functor<A&>(this, &tmb::Node<A>::get);
@@ -67,14 +62,12 @@ tmb::Node<A>::Node(std::string name)
    _get_const_pointer_func =
        new Loki::Functor<const A*>(this, &tmb::Node<A>::get_const_pointer);
    _val = new A();
+   _active_get = &_get_solved;
 }
 
 template <class A>
 tmb::Node<A>::Node(const tmb::Node<A>& copy_from)
-    : _name(copy_from._name)
-    , _vec_functors(copy_from._vec_functors)
-    , _vec_functors_stream(copy_from._vec_functors_stream)
-    , _active_get(copy_from._active_get) {
+    : BaseNodeFeatures(copy_from), _vec_functors(copy_from._vec_functors) {
    _get_solved = new Loki::Functor<A>(this, &Node<A>::get_solved);
    _get_func = new Loki::Functor<A&>(this, &tmb::Node<A>::get);
    _get_copy_func = new Loki::Functor<A>(this, &tmb::Node<A>::get_copy);
@@ -85,6 +78,10 @@ tmb::Node<A>::Node(const tmb::Node<A>& copy_from)
        new Loki::Functor<const A*>(this, &tmb::Node<A>::get_const_pointer);
    _val = new A();
    *_val = *(copy_from._val);
+   if (copy_from._active_get == &(copy_from._get_solved))
+      _active_get = &_get_solved;
+   else
+      _active_get = copy_from._active_get;
 }
 
 template <class A>
@@ -190,106 +187,185 @@ namespace tmb {
    template <bool flag>
    struct AddNodeName {
       template <class A>
-      static void doF(A arg1, std::vector<std::string>& vec_str) {
+      static void doF(A arg1,
+                      std::vector<std::string>& vec_str,
+                      std::vector<BaseNodeFeatures*>& depends_on) {
          vec_str.push_back(arg1->get_name());
+         depends_on.push_back(arg1);
       }
    };
 
    template <>
    struct AddNodeName<false> {
       template <class A>
-      static void doF(A, std::vector<std::string>& vec_str) {
+      static void doF(A,
+                      std::vector<std::string>& vec_str,
+                      std::vector<BaseNodeFeatures*>&) {
          vec_str.push_back("uknown");
       }
    };
 }
 
+namespace tmb {
+   namespace Private {
+      template <class List>
+      struct CreateFunctorPointerListFromArgs;
+
+      template <class Head, class Tail>
+      struct CreateFunctorPointerListFromArgs<Loki::Typelist<Head, Tail> > {
+         typedef Loki::Typelist<
+             Loki::Functor<Head>*,
+             typename CreateFunctorPointerListFromArgs<Tail>::Result> Result;
+      };
+
+      template <class Tail>
+      struct CreateFunctorPointerListFromArgs<
+          Loki::Typelist<Tail, Loki::NullType> > {
+         typedef Loki::Typelist<Loki::Functor<Tail>*, Loki::NullType> Result;
+      };
+
+      template <class List, int N>
+      struct SetTupleArgs;
+
+      template <class Head, class Tail, int N>
+      struct SetTupleArgs<Loki::Typelist<Head, Tail>, N> {
+         template <class TupleArgsParams, class TupleArgs>
+         static void doF(Loki::Tuple<TupleArgsParams>& tuple_of_args,
+                         Loki::Tuple<TupleArgs>& tuple_args) {
+            typedef typename Loki::TL::TypeAt<TupleArgsParams, N>::Result
+                ArgTypeRaw;
+            typedef typename Loki::Select<
+                Loki::TypeTraits<ArgTypeRaw>::isPointer,
+                typename Loki::TypeTraits<ArgTypeRaw>::PointeeType,
+                ArgTypeRaw>::Result ArgType;
+            Loki::Field<N>(tuple_args) =
+                Wrap<has_is_a_node<ArgType>::Result>::template doF<Head>(
+                    Loki::Field<N>(tuple_of_args));
+            SetTupleArgs<Tail, N + 1>::doF(tuple_of_args, tuple_args);
+         }
+      };
+
+      template <class Tail, int N>
+      struct SetTupleArgs<Loki::Typelist<Tail, Loki::NullType>, N> {
+         template <class TupleArgsParams, class TupleArgs>
+         static void doF(Loki::Tuple<TupleArgsParams>& tuple_of_args,
+                         Loki::Tuple<TupleArgs>& tuple_args) {
+            typedef typename Loki::TL::TypeAt<TupleArgsParams, N>::Result
+                ArgTypeRaw;
+            typedef typename Loki::Select<
+                Loki::TypeTraits<ArgTypeRaw>::isPointer,
+                typename Loki::TypeTraits<ArgTypeRaw>::PointeeType,
+                ArgTypeRaw>::Result ArgType;
+            Loki::Field<N>(tuple_args) =
+                Wrap<has_is_a_node<ArgType>::Result>::template doF<Tail>(
+                    Loki::Field<N>(tuple_of_args));
+         }
+      };
+
+      template <class List, int N>
+      struct AddArgObserverAndName;
+
+      template <class Head, class Tail, int N>
+      struct AddArgObserverAndName<Loki::Typelist<Head, Tail>, N> {
+         template <class A, class TupleArgs>
+         static void doF(Node<A>* node_ptr,
+                         Loki::Tuple<TupleArgs>& tuple_of_args,
+                         unsigned index,
+                         std::vector<std::string>& subject_index,
+                         std::vector<BaseNodeFeatures*>& depends_on) {
+            typedef typename Loki::TL::TypeAt<TupleArgs, N>::Result ArgTypeRaw;
+            typedef typename Loki::Select<
+                Loki::TypeTraits<ArgTypeRaw>::isPointer,
+                typename Loki::TypeTraits<ArgTypeRaw>::PointeeType,
+                ArgTypeRaw>::Result ArgType;
+            ArgTypeRaw& arg = Loki::Field<N>(tuple_of_args);
+            tmb::NodeObserver<A>* observer =
+                new tmb::NodeObserver<A>(index, N, node_ptr);
+            tmb::AddObserver<Loki::Conversion<ArgType, Subject>::exists>::
+                template doF<ArgTypeRaw>(arg, observer);
+            tmb::AddNodeName<Loki::Conversion<ArgType, Subject>::exists>::
+                template doF<ArgTypeRaw>(arg, subject_index, depends_on);
+            AddArgObserverAndName<Tail, N + 1>::doF(
+                node_ptr, tuple_of_args, index, subject_index, depends_on);
+         }
+      };
+
+      template <class Tail, int N>
+      struct AddArgObserverAndName<Loki::Typelist<Tail, Loki::NullType>, N> {
+         template <class A, class TupleArgs>
+         static void doF(Node<A>* node_ptr,
+                         Loki::Tuple<TupleArgs>& tuple_of_args,
+                         unsigned index,
+                         std::vector<std::string>& subject_index,
+                         std::vector<BaseNodeFeatures*>& depends_on) {
+            typedef typename Loki::TL::TypeAt<TupleArgs, N>::Result ArgTypeRaw;
+            typedef typename Loki::Select<
+                Loki::TypeTraits<ArgTypeRaw>::isPointer,
+                typename Loki::TypeTraits<ArgTypeRaw>::PointeeType,
+                ArgTypeRaw>::Result ArgType;
+            ArgTypeRaw& arg = Loki::Field<N>(tuple_of_args);
+            tmb::NodeObserver<A>* observer =
+                new tmb::NodeObserver<A>(index, N, node_ptr);
+            tmb::AddObserver<Loki::Conversion<ArgType, Subject>::exists>::
+                template doF<ArgTypeRaw>(arg, observer);
+            tmb::AddNodeName<Loki::Conversion<ArgType, Subject>::exists>::
+                template doF<ArgTypeRaw>(arg, subject_index, depends_on);
+         }
+      };
+   }
+}
+
+template <class A>
+template <class ArgList, class TupleArgs>
+void tmb::Node<A>::addStrategyMultiple(Loki::Functor<A, ArgList>* functor,
+                                       TupleArgs& tuple_of_args,
+                                       std::string& dependency_name) {
+   Loki::Tuple<typename tmb::Private::CreateFunctorPointerListFromArgs<
+       ArgList>::Result> tuple_args;
+   tmb::Private::SetTupleArgs<ArgList, 0>::doF(tuple_of_args, tuple_args);
+
+   tmb::FunctorWrapper<A, ArgList>* wrap =
+       new tmb::FunctorWrapper<A, ArgList>(*functor, tuple_args);
+   _vec_functors.push_back(new Loki::Functor<A>(
+       wrap, &tmb::FunctorWrapper<A, ArgList>::return_val));
+   _vec_functors_stream.push_back(new Loki::Functor<std::vector<std::string> >(
+       wrap, &tmb::FunctorWrapper<A, ArgList>::args_as_stream));
+   _vec_subjects.resize(_vec_subjects.size() + 1);
+
+   _vec_dependencies.push_back(
+       std::vector<unsigned>(Loki::TL::Length<ArgList>::value, 0));
+
+   _vec_functor_wrappers.push_back(wrap);
+   tmb::Private::AddArgObserverAndName<ArgList, 0>::doF(this,
+                                                        tuple_of_args,
+                                                        _vec_functors.size() -
+                                                            1,
+                                                        _vec_subjects.back(),
+                                                        _depends_on);
+   _active_get = &(_vec_functors.back());
+   _vec_dependency_name.push_back(dependency_name);
+}
+
 template <class A>
 template <class Arg1, class Arg2>
 void tmb::Node<A>::addStrategy(Loki::Functor<A, TYPELIST(Arg1)>* functor,
-                               Arg2 arg1) {
-   Loki::Tuple<TYPELIST(Loki::Functor<Arg1>*)> tuple_args;
-   typedef typename Loki::Select<Loki::TypeTraits<Arg2>::isPointer,
-                                 typename Loki::TypeTraits<Arg2>::PointeeType,
-                                 Arg2>::Result Arg2Type;
-
-   Loki::Field<0>(tuple_args) =
-       Wrap<has_is_a_node<Arg2Type>::Result>::template doF<Arg1, Arg2>(arg1);
-
-   tmb::FunctorWrapper<A, TYPELIST(Arg1)>* wrap =
-       new tmb::FunctorWrapper<A, TYPELIST(Arg1)>(*functor, tuple_args);
-
-   _vec_functors.push_back(new Loki::Functor<A>(
-       wrap, &tmb::FunctorWrapper<A, TYPELIST(Arg1)>::return_val));
-   _vec_functors_stream.push_back(new Loki::Functor<std::vector<std::string> >(
-       wrap, &tmb::FunctorWrapper<A, TYPELIST(Arg1)>::args_as_stream));
-   _vec_subjects.resize(_vec_subjects.size() + 1);
-
-   _vec_dependencies.push_back(std::vector<unsigned>(1, 0));
-
-   // Add a new observer
-   tmb::NodeObserver<A>* observer =
-       new tmb::NodeObserver<A>(_vec_functors.size() - 1, 0, this);
-   // Check if arg1 is a subject or not?
-   tmb::AddObserver<Loki::Conversion<Arg2Type, Subject>::exists>::template doF<
-       Arg2>(arg1, observer);
-   tmb::AddNodeName<Loki::Conversion<Arg2Type, Subject>::exists>::template doF<
-       Arg2>(arg1, _vec_subjects.back());
-   _active_get = &(_vec_functors.back());
+                               Arg2 arg1,
+                               std::string dependency_name) {
+   Loki::Tuple<TYPELIST(Arg2)> tuple_of_args;
+   Loki::Field<0>(tuple_of_args) = arg1;
+   addStrategyMultiple(functor, tuple_of_args, dependency_name);
 }
 
 template <class A>
 template <class Arg1, class Arg2, class Arg1_param, class Arg2_param>
 void tmb::Node<A>::addStrategy(Loki::Functor<A, TYPELIST(Arg1, Arg2)>* functor,
                                Arg1_param arg1,
-                               Arg2_param arg2) {
-   Loki::Tuple<TYPELIST(Loki::Functor<Arg1>*, Loki::Functor<Arg2>*)> tuple_args;
-   typedef typename Loki::Select<
-       Loki::TypeTraits<Arg1_param>::isPointer,
-       typename Loki::TypeTraits<Arg1_param>::PointeeType,
-       Arg1_param>::Result Arg1Type;
-   typedef typename Loki::Select<
-       Loki::TypeTraits<Arg2_param>::isPointer,
-       typename Loki::TypeTraits<Arg2_param>::PointeeType,
-       Arg2_param>::Result Arg2Type;
-
-   Loki::Field<0>(tuple_args) =
-       Wrap<has_is_a_node<Arg1Type>::Result>::template doF<Arg1, Arg1_param>(
-           arg1);
-
-   Loki::Field<1>(tuple_args) =
-       Wrap<has_is_a_node<Arg2Type>::Result>::template doF<Arg2, Arg2_param>(
-           arg2);
-
-   tmb::FunctorWrapper<A, TYPELIST(Arg1, Arg2)>* wrap =
-       new tmb::FunctorWrapper<A, TYPELIST(Arg1, Arg2)>(*functor, tuple_args);
-
-   _vec_functors.push_back(new Loki::Functor<A>(
-       wrap, &tmb::FunctorWrapper<A, TYPELIST(Arg1, Arg2)>::return_val));
-   _vec_functors_stream.push_back(new Loki::Functor<std::vector<std::string> >(
-       wrap, &tmb::FunctorWrapper<A, TYPELIST(Arg1, Arg2)>::args_as_stream));
-   _vec_subjects.resize(_vec_subjects.size() + 1);
-
-   _vec_dependencies.push_back(std::vector<unsigned>(2, 0));
-
-   _vec_functor_wrappers.push_back(wrap);
-
-   // Add a new observer
-   tmb::NodeObserver<A>* observer1 =
-       new tmb::NodeObserver<A>(_vec_functors.size() - 1, 0, this);
-   tmb::NodeObserver<A>* observer2 =
-       new tmb::NodeObserver<A>(_vec_functors.size() - 1, 1, this);
-   // Check if arg1 is a subject or not?
-   tmb::AddObserver<Loki::Conversion<Arg1Type, Subject>::exists>::template doF<
-       Arg1_param>(arg1, observer1);
-   tmb::AddObserver<Loki::Conversion<Arg2Type, Subject>::exists>::template doF<
-       Arg2_param>(arg2, observer2);
-
-   tmb::AddNodeName<Loki::Conversion<Arg2Type, Subject>::exists>::template doF<
-       Arg1_param>(arg1, _vec_subjects.back());
-   tmb::AddNodeName<Loki::Conversion<Arg2Type, Subject>::exists>::template doF<
-       Arg2_param>(arg2, _vec_subjects.back());
-   _active_get = &(_vec_functors.back());
+                               Arg2_param arg2,
+                               std::string dependency_name) {
+   Loki::Tuple<TYPELIST(Arg1_param, Arg2_param)> tuple_of_args;
+   Loki::Field<0>(tuple_of_args) = arg1;
+   Loki::Field<1>(tuple_of_args) = arg2;
+   addStrategyMultiple(functor, tuple_of_args, dependency_name);
 }
 
 template <class A>
@@ -314,16 +390,6 @@ void tmb::Node<A>::set_active_strategy(size_t index, size_t key) {
                        0) == _vec_dependencies[index].size()) {
       _active_get = &(_vec_functors[index]);
       notify();
-   }
-}
-
-template <class A>
-void tmb::Node<A>::reset_dependencies() {
-   typedef std::vector<std::vector<unsigned> > dependencies;
-   for (dependencies::iterator it = _vec_dependencies.begin();
-        it != _vec_dependencies.end();
-        ++it) {
-      std::fill(it->begin(), it->end(), 0);
    }
 }
 
@@ -358,52 +424,20 @@ Loki::Functor<const A*>& tmb::Node<A>::get_const_pointer_func() {
 }
 
 template <class A>
-void tmb::draw_dot_graph(tmb::Node<A>* node) {
+void tmb::draw_dot_graph(tmb::Node<A>* node, unsigned levels) {
    std::ofstream fs;
-   fs.open("dependeny_graph.dot");
+   std::vector<std::string> dictionary_of_nodes_added;
+   fs.open("dependency_graph.dot");
    fs << "digraph G {" << std::endl;
-   std::vector<std::vector<std::string> > functor_args_vals =
-       node->val_of_functor_wrappers();
-   unsigned count = 0;
-   fs << count << "[label=\"" << node->get_name() << " \\n";
-   fs << "value: " << node->get() << "\"";
-   fs << ",shape=\"rectangle\",style=filled,fillcolor=\"turquoise\"];"
-      << "\n";
-   for (unsigned i = 0; i < node->vector_of_strings().size(); ++i) {
-      std::vector<std::string>& tokens(functor_args_vals[i]);
-      for (unsigned j = 0; j < tokens.size(); ++j) {
-         ++count;
-         fs << count << "[label=\"" << node->vector_of_strings()[i][j]
-            << " \\n";
-         fs << "value: " << tokens[j] << "\"";
-         fs << ",shape=\"rectangle\",style=filled,fillcolor=\"turquoise\"];"
-            << "\n";
-      }
-   }
-   count = 0;
-   for (unsigned i = 0; i < node->vector_of_strings().size(); ++i) {
-      std::vector<std::string>& tokens(functor_args_vals[i]);
-      for (unsigned j = 0; j < tokens.size(); ++j) {
-         ++count;
-         fs << "0->" << count << ";" << std::endl;
-      }
-   }
-   fs << "}";
+   draw_nodes(fs, node, levels, 0, dictionary_of_nodes_added);
+   fs << "}" << std::endl;
    fs.close();
 }
 
 template <class A>
-const std::vector<std::vector<std::string> >& tmb::Node<A>::vector_of_strings()
-    const {
-   return _vec_subjects;
-}
-
-template <class A>
-std::vector<std::vector<std::string> > tmb::Node<A>::val_of_functor_wrappers() {
-   std::vector<std::vector<std::string> > return_val;
-   for (unsigned i = 0; i < _vec_functors_stream.size(); ++i) {
-      return_val.push_back((*(_vec_functors_stream[i]))());
-   }
-   return return_val;
+std::string tmb::Node<A>::get_val_as_string() {
+   std::stringstream str;
+   str << get();
+   return str.str();
 }
 #endif

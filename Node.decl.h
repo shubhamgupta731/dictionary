@@ -43,6 +43,7 @@ namespace tmb {
    HAS_TYPEDEF(isANode, has_is_a_node);
    template <class A>
    class Node;
+   class BaseNodeFeatures;
 
    template <class A>
    class NodeObserver : public Observer {
@@ -56,17 +57,52 @@ namespace tmb {
       void update();
    };
 
+   void draw_nodes(std::ofstream& fs,
+                   tmb::BaseNodeFeatures* node,
+                   unsigned levels,
+                   unsigned count,
+                   std::vector<std::string>& dictionary_of_nodes_added);
+
    template <class A>
-   void draw_dot_graph(tmb::Node<A>* node);
+   void draw_dot_graph(tmb::Node<A>* node, unsigned levels = 0);
 
    class BaseFunctorWrapper;
-   template <class A>
-   class Node : public Subject {
+   class BaseNodeFeatures {
      protected:
       /**
        * @brief name - Name of the variable
        */
       std::string _name;
+      std::vector<Loki::Functor<std::vector<std::string> >*>
+          _vec_functors_stream;
+      std::vector<std::vector<unsigned> > _vec_dependencies;
+      std::vector<tmb::BaseFunctorWrapper*> _vec_functor_wrappers;
+      std::vector<std::string> _vec_dependency_name;
+      std::vector<BaseNodeFeatures*> _depends_on;
+
+      /**
+       * @brief vector of subjects this variable depends on
+       *
+       * The size of this vector should be equal to _vec_functors because
+       * each observer belongs to a strategy.
+       */
+      std::vector<std::vector<std::string> > _vec_subjects;
+
+     public:
+      void reset_dependencies();
+      virtual std::string& get_name();
+      const std::vector<std::vector<std::string> >& vector_of_strings() const;
+      const std::vector<std::string>& get_vector_dependencies_name() const;
+      std::vector<std::vector<std::string> > val_of_functor_wrappers();
+      BaseNodeFeatures(const BaseNodeFeatures& copy_from);
+      BaseNodeFeatures();
+      const std::vector<BaseNodeFeatures*>& get_dependent_nodes() const;
+      virtual std::string get_val_as_string() = 0;
+   };
+
+   template <class A>
+   class Node : public Subject, public BaseNodeFeatures {
+     protected:
       /**
        * @brief Value of the node
        */
@@ -81,17 +117,6 @@ namespace tmb {
        * different arguments to certain variables or to other Nodes
        */
       std::vector<Loki::Functor<A>*> _vec_functors;
-      std::vector<Loki::Functor<std::vector<std::string> >*> _vec_functors_stream;
-      std::vector<std::vector<unsigned> > _vec_dependencies;
-      std::vector<tmb::BaseFunctorWrapper*> _vec_functor_wrappers;
-
-      /**
-       * @brief vector of subjects this variable depends on
-       *
-       * The size of this vector should be equal to _vec_functors because
-       * each observer belongs to a strategy.
-       */
-      std::vector<std::vector<std::string> > _vec_subjects;
 
       /**
        * @brief This functor points to the get_solved function which just
@@ -151,12 +176,17 @@ namespace tmb {
       template <class B>
       A& set(B bal);
 
+      template <class ArgList, class TupleArgs>
+      void addStrategyMultiple(Loki::Functor<A, ArgList>* functor,
+                               TupleArgs& tuple_args,
+                               std::string& dependency_name);
       /**
        * @brief   Add a strategy which takes one argument
        */
       template <class Arg1, class Arg1_param>
       void addStrategy(Loki::Functor<A, TYPELIST(Arg1)>* functor,
-                       Arg1_param arg1);
+                       Arg1_param arg1,
+                       std::string dependency_name = "unknown");
 
       /**
        * @brief   Add a strategy which takes two argument
@@ -164,7 +194,8 @@ namespace tmb {
       template <class Arg1, class Arg2, class Arg1_param, class Arg2_param>
       void addStrategy(Loki::Functor<A, TYPELIST(Arg1, Arg2)>* functor,
                        Arg1_param arg1,
-                       Arg2_param arg2);
+                       Arg2_param arg2,
+                       std::string dependency_name = "unknown");
 
       const std::vector<Loki::Functor<A>*>& get_vec_functors() const;
       void set_active_strategy(size_t index, size_t key);
@@ -175,12 +206,9 @@ namespace tmb {
       Loki::Functor<A*>& get_pointer_func();
       Loki::Functor<const A*>& get_const_pointer_func();
       Loki::Functor<A>& get_copy_func();
-      const std::vector<std::vector<std::string> >& vector_of_strings() const;
-      std::vector<std::vector<std::string> > val_of_functor_wrappers();
-      void reset_dependencies();
       operator A();
       ~Node();
-      std::string& get_name();
+      virtual std::string get_val_as_string();
    };
 }
 #endif
