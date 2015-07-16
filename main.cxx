@@ -44,11 +44,11 @@ int main() {
                                                   &int_nodes_3[i],
                                                   "return_4_with_2_3");
    double sum = 0;
-   for (unsigned count = 0; count < 1; ++count)
-      for (size_t i = 0; i < 100000; ++i) {
-         int_nodes_1[i].set(5.0);
-         sum += test_nodes[i].get();
-      }
+   for (unsigned count = 0; count < 10000; ++count)
+   for (size_t i = 0; i < 100000; ++i) {
+      int_nodes_1[i].set(5.0);
+      sum += test_nodes[i].get();
+   }
    std::cout << "sum: " << sum << std::endl;
 #ifdef DEBUG
    tmb::draw_dot_graph(&(test_nodes[0]), 5);

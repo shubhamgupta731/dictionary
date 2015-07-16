@@ -129,8 +129,8 @@ namespace tmb {
    };
 
    class BaseFunctorWrapper {
-      public:
-         virtual ~BaseFunctorWrapper() {}
+     public:
+      virtual ~BaseFunctorWrapper() {}
    };
    /**
     * @class      : FunctorWrapper
@@ -152,7 +152,7 @@ namespace tmb {
    template <class Return,
              class Tlist = Loki::NullType,
              class PropertiesType = Tlist>
-   struct FunctorWrapper: public BaseFunctorWrapper {
+   struct FunctorWrapper : public BaseFunctorWrapper {
      public:
       /**
        * @brief Pointer to the functor which is being wrapped

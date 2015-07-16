@@ -69,6 +69,7 @@ namespace tmb {
    class BaseFunctorWrapper;
    class BaseNodeFeatures {
      protected:
+      std::vector<std::vector<unsigned> > _vec_dependencies;
       /**
        * @brief name - Name of the variable
        */
@@ -82,7 +83,6 @@ namespace tmb {
       std::vector<std::vector<std::string> > _vec_subjects;
       std::string _value_set_using;
 #endif
-      std::vector<std::vector<unsigned> > _vec_dependencies;
 
      public:
       void reset_dependencies();
@@ -103,11 +103,6 @@ namespace tmb {
    template <class A>
    class Node : public Subject, public BaseNodeFeatures {
      protected:
-      /**
-       * @brief Value of the node
-       */
-      A* _val;
-
       /**
        * @brief Vector of functors which to be used to compute the variable
        *
@@ -141,6 +136,10 @@ namespace tmb {
        * @return  Value of the variable
        */
       A& get_solved();
+      /**
+       * @brief Value of the node
+       */
+      A* _val;
 
      public:
       typedef Loki::Int2Type<0> isANode;
