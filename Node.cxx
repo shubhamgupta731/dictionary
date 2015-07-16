@@ -4,7 +4,12 @@ tmb::BaseNodeFeatures::BaseNodeFeatures() {}
 
 tmb::BaseNodeFeatures::BaseNodeFeatures(const tmb::BaseNodeFeatures& copy_from)
     : _name(copy_from._name)
-    , _vec_functors_stream(copy_from._vec_functors_stream) {}
+#ifdef DEBUG
+    , _vec_functors_stream(copy_from._vec_functors_stream)
+    , _value_set_using(copy_from._value_set_using)
+#endif
+{
+}
 
 void tmb::BaseNodeFeatures::reset_dependencies() {
    typedef std::vector<std::vector<unsigned> > dependencies;
@@ -17,6 +22,7 @@ void tmb::BaseNodeFeatures::reset_dependencies() {
 
 std::string& tmb::BaseNodeFeatures::get_name() { return _name; }
 
+#ifdef DEBUG
 const std::vector<std::vector<std::string> >&
     tmb::BaseNodeFeatures::vector_of_strings() const {
    return _vec_subjects;
@@ -36,10 +42,11 @@ const std::vector<std::string>&
    return _vec_dependency_name;
 }
 
-const std::vector<tmb::BaseNodeFeatures*>&
+const std::vector<std::vector<tmb::BaseNodeFeatures*> >&
     tmb::BaseNodeFeatures::get_dependent_nodes() const {
    return _depends_on;
 }
+#endif
 
 char space2underscore(char text) {
    if (text == ' ') {
@@ -48,6 +55,7 @@ char space2underscore(char text) {
    return text;
 }
 
+#ifdef DEBUG
 void tmb::draw_nodes(std::ofstream& fs,
                      tmb::BaseNodeFeatures* node,
                      unsigned levels,
@@ -70,7 +78,8 @@ void tmb::draw_nodes(std::ofstream& fs,
                  dictionary_of_nodes_added.end(),
                  original_node_name) == dictionary_of_nodes_added.end()) {
       fs << original_node_name << "[label=\"" << node->get_name() << " \\n";
-      fs << "value: " << node->get_val_as_string() << "\"";
+      fs << "value: " << node->get_val_as_string() << " \\n"
+         << "set using: " << node->get_value_set_using() << "\"";
       fs << ",shape=\"rectangle\",style=filled,fillcolor=\"turquoise\"];"
          << "\n";
       dictionary_of_nodes_added.push_back(original_node_name);
@@ -94,7 +103,15 @@ void tmb::draw_nodes(std::ofstream& fs,
                        node_name) == dictionary_of_nodes_added.end()) {
             fs << node_name << "[label=\"" << node->vector_of_strings()[i][j]
                << " \\n";
-            fs << "value: " << tokens[j] << "\"";
+            fs << "value: " << tokens[j] << " \\n"
+               << "set using: ";
+
+            if (BaseNodeFeatures* ptr = (node->get_dependent_nodes())[i][j])
+               fs << ptr->get_value_set_using();
+            else
+               fs << "unknown";
+
+            fs << "\"";
             fs << ",shape=\"rectangle\",style=filled,fillcolor=\"turquoise\"];"
                << "\n";
             dictionary_of_nodes_added.push_back(node_name);
@@ -105,13 +122,24 @@ void tmb::draw_nodes(std::ofstream& fs,
       fs << "}" << std::endl;
    }
    if (levels > 0) {
-      const std::vector<tmb::BaseNodeFeatures*>& dependent_nodes =
+      const std::vector<std::vector<tmb::BaseNodeFeatures*> >& dependent_nodes =
           node->get_dependent_nodes();
-      for (std::vector<tmb::BaseNodeFeatures*>::const_iterator it =
-               dependent_nodes.begin();
-           it != dependent_nodes.end();
-           ++it) {
-         draw_nodes(fs, *it, levels - 1, count, dictionary_of_nodes_added);
+      for (
+          std::vector<std::vector<tmb::BaseNodeFeatures*> >::const_iterator it =
+              dependent_nodes.begin();
+          it != dependent_nodes.end();
+          ++it) {
+         for (std::vector<tmb::BaseNodeFeatures*>::const_iterator it_inside =
+                  it->begin();
+              it_inside != it->end();
+              ++it_inside)
+            draw_nodes(
+                fs, *it_inside, levels - 1, count, dictionary_of_nodes_added);
       }
    }
 }
+
+const std::string& tmb::BaseNodeFeatures::get_value_set_using() const {
+   return _value_set_using;
+}
+#endif

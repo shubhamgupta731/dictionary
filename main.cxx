@@ -33,7 +33,8 @@ int main() {
    int_nodes_3.resize(100000, tmb::Node<double>("int_node_3"));
    test_nodes.resize(100000, tmb::Node<double>("test_node"));
    for (size_t i = 0; i < 100000; ++i)
-      int_nodes[i].addStrategy<double&>(&return_3_func, &int_nodes_1[i], "return_3");
+      int_nodes[i].addStrategy<double&>(
+          &return_3_func, &int_nodes_1[i], "return_3");
    for (size_t i = 0; i < 100000; ++i)
       test_nodes[i].addStrategy<double&, double&>(
           &return_4_func, &int_nodes[i], &int_nodes_1[i], "return_4");
@@ -49,6 +50,8 @@ int main() {
          sum += test_nodes[i].get();
       }
    std::cout << "sum: " << sum << std::endl;
+#ifdef DEBUG
    tmb::draw_dot_graph(&(test_nodes[0]), 5);
+#endif
    return 0;
 }

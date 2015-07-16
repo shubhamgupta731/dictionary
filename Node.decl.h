@@ -73,31 +73,31 @@ namespace tmb {
        * @brief name - Name of the variable
        */
       std::string _name;
+#ifdef DEBUG
       std::vector<Loki::Functor<std::vector<std::string> >*>
           _vec_functors_stream;
-      std::vector<std::vector<unsigned> > _vec_dependencies;
       std::vector<tmb::BaseFunctorWrapper*> _vec_functor_wrappers;
       std::vector<std::string> _vec_dependency_name;
-      std::vector<BaseNodeFeatures*> _depends_on;
-
-      /**
-       * @brief vector of subjects this variable depends on
-       *
-       * The size of this vector should be equal to _vec_functors because
-       * each observer belongs to a strategy.
-       */
+      std::vector<std::vector<BaseNodeFeatures*> > _depends_on;
       std::vector<std::vector<std::string> > _vec_subjects;
+      std::string _value_set_using;
+#endif
+      std::vector<std::vector<unsigned> > _vec_dependencies;
 
      public:
       void reset_dependencies();
       virtual std::string& get_name();
+#ifdef DEBUG
       const std::vector<std::vector<std::string> >& vector_of_strings() const;
       const std::vector<std::string>& get_vector_dependencies_name() const;
+      const std::vector<std::vector<BaseNodeFeatures*> >& get_dependent_nodes()
+          const;
+      virtual std::string get_val_as_string() = 0;
+      virtual const std::string& get_value_set_using() const;
+#endif
       std::vector<std::vector<std::string> > val_of_functor_wrappers();
       BaseNodeFeatures(const BaseNodeFeatures& copy_from);
       BaseNodeFeatures();
-      const std::vector<BaseNodeFeatures*>& get_dependent_nodes() const;
-      virtual std::string get_val_as_string() = 0;
    };
 
    template <class A>

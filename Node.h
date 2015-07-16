@@ -41,6 +41,9 @@ template <class B>
 A& tmb::Node<A>::set(B val) {
    *_val = val;
    _active_get = &_get_solved;
+#ifdef DEBUG
+   _value_set_using = "using set";
+#endif
    notify();
    return *_val;
 }
@@ -63,6 +66,9 @@ tmb::Node<A>::Node(std::string name) {
        new Loki::Functor<const A*>(this, &tmb::Node<A>::get_const_pointer);
    _val = new A();
    _active_get = &_get_solved;
+#ifdef DEBUG
+   _value_set_using = "using set";
+#endif
 }
 
 template <class A>
@@ -98,6 +104,7 @@ tmb::Node<A>::~Node() {
         it != _vec_functors.end();
         ++it)
       delete (*it);
+#ifdef DEBUG
    for (
        typename std::vector<Loki::Functor<std::vector<std::string> >*>::iterator
            it = _vec_functors_stream.begin();
@@ -109,6 +116,7 @@ tmb::Node<A>::~Node() {
         it != _vec_functor_wrappers.end();
         ++it)
       delete (*it);
+#endif
 }
 
 namespace tmb {
@@ -200,8 +208,9 @@ namespace tmb {
       template <class A>
       static void doF(A,
                       std::vector<std::string>& vec_str,
-                      std::vector<BaseNodeFeatures*>&) {
+                      std::vector<BaseNodeFeatures*>& depends_on) {
          vec_str.push_back("uknown");
+         depends_on.push_back(NULL);
       }
    };
 }
@@ -270,9 +279,13 @@ namespace tmb {
          template <class A, class TupleArgs>
          static void doF(Node<A>* node_ptr,
                          Loki::Tuple<TupleArgs>& tuple_of_args,
-                         unsigned index,
+                         unsigned index
+#ifdef DEBUG
+                         ,
                          std::vector<std::string>& subject_index,
-                         std::vector<BaseNodeFeatures*>& depends_on) {
+                         std::vector<BaseNodeFeatures*>& depends_on
+#endif
+                         ) {
             typedef typename Loki::TL::TypeAt<TupleArgs, N>::Result ArgTypeRaw;
             typedef typename Loki::Select<
                 Loki::TypeTraits<ArgTypeRaw>::isPointer,
@@ -283,10 +296,19 @@ namespace tmb {
                 new tmb::NodeObserver<A>(index, N, node_ptr);
             tmb::AddObserver<Loki::Conversion<ArgType, Subject>::exists>::
                 template doF<ArgTypeRaw>(arg, observer);
+#ifdef DEBUG
             tmb::AddNodeName<Loki::Conversion<ArgType, Subject>::exists>::
                 template doF<ArgTypeRaw>(arg, subject_index, depends_on);
-            AddArgObserverAndName<Tail, N + 1>::doF(
-                node_ptr, tuple_of_args, index, subject_index, depends_on);
+#endif
+            AddArgObserverAndName<Tail, N + 1>::doF(node_ptr,
+                                                    tuple_of_args,
+                                                    index
+#ifdef DEBUG
+                                                    ,
+                                                    subject_index,
+                                                    depends_on
+#endif
+                                                    );
          }
       };
 
@@ -295,9 +317,13 @@ namespace tmb {
          template <class A, class TupleArgs>
          static void doF(Node<A>* node_ptr,
                          Loki::Tuple<TupleArgs>& tuple_of_args,
-                         unsigned index,
+                         unsigned index
+#ifdef DEBUG
+                         ,
                          std::vector<std::string>& subject_index,
-                         std::vector<BaseNodeFeatures*>& depends_on) {
+                         std::vector<BaseNodeFeatures*>& depends_on
+#endif
+                         ) {
             typedef typename Loki::TL::TypeAt<TupleArgs, N>::Result ArgTypeRaw;
             typedef typename Loki::Select<
                 Loki::TypeTraits<ArgTypeRaw>::isPointer,
@@ -308,8 +334,10 @@ namespace tmb {
                 new tmb::NodeObserver<A>(index, N, node_ptr);
             tmb::AddObserver<Loki::Conversion<ArgType, Subject>::exists>::
                 template doF<ArgTypeRaw>(arg, observer);
+#ifdef DEBUG
             tmb::AddNodeName<Loki::Conversion<ArgType, Subject>::exists>::
                 template doF<ArgTypeRaw>(arg, subject_index, depends_on);
+#endif
          }
       };
    }
@@ -328,22 +356,35 @@ void tmb::Node<A>::addStrategyMultiple(Loki::Functor<A, ArgList>* functor,
        new tmb::FunctorWrapper<A, ArgList>(*functor, tuple_args);
    _vec_functors.push_back(new Loki::Functor<A>(
        wrap, &tmb::FunctorWrapper<A, ArgList>::return_val));
+#ifdef DEBUG
    _vec_functors_stream.push_back(new Loki::Functor<std::vector<std::string> >(
        wrap, &tmb::FunctorWrapper<A, ArgList>::args_as_stream));
-   _vec_subjects.resize(_vec_subjects.size() + 1);
+   static std::vector<std::string> empty_vec_string;
+   static std::vector<tmb::BaseNodeFeatures*> empty_base_features;
+   _vec_subjects.push_back(empty_vec_string);
+   _depends_on.push_back(empty_base_features);
+
+   _vec_subjects.back().reserve(Loki::TL::Length<ArgList>::value);
+   _depends_on.back().reserve(Loki::TL::Length<ArgList>::value);
+   _vec_functor_wrappers.push_back(wrap);
+#endif
 
    _vec_dependencies.push_back(
        std::vector<unsigned>(Loki::TL::Length<ArgList>::value, 0));
 
-   _vec_functor_wrappers.push_back(wrap);
    tmb::Private::AddArgObserverAndName<ArgList, 0>::doF(this,
                                                         tuple_of_args,
-                                                        _vec_functors.size() -
-                                                            1,
+                                                        _vec_functors.size() - 1
+#ifdef DEBUG
+                                                        ,
                                                         _vec_subjects.back(),
-                                                        _depends_on);
+                                                        _depends_on.back()
+#endif
+                                                        );
    _active_get = &(_vec_functors.back());
+#ifdef DEBUG
    _vec_dependency_name.push_back(dependency_name);
+#endif
 }
 
 template <class A>
@@ -388,6 +429,9 @@ void tmb::Node<A>::set_active_strategy(size_t index, size_t key) {
    if (std::accumulate(_vec_dependencies[index].begin(),
                        _vec_dependencies[index].end(),
                        0) == _vec_dependencies[index].size()) {
+#ifdef DEBUG
+      _value_set_using = _vec_dependency_name[index];
+#endif
       _active_get = &(_vec_functors[index]);
       notify();
    }
