@@ -18,8 +18,10 @@ Subject::~Subject() {
 }
 
 void Subject::notify() {
-   for (std::size_t i = 0; i < views.size(); i++)
-      views[i]->update();
+   std::vector<Observer *>::iterator it_end = views.end();
+   for (std::vector<Observer *>::iterator it = views.begin(); it != it_end;
+        ++it)
+      (*it)->update();
 }
 
 void Subject::attach(Observer *obs) { views.push_back(obs); }
