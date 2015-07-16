@@ -6,8 +6,8 @@ OBJ=main.o\
 CXX=clang++
 
 #OPTIONS=-g -fsanitize=address
-OPTIONS= -O3  -fno-omit-frame-pointer #-fsanitize=address,undefined,alignment,bool,bounds,enum,float-cast-overflow,float-divide-by-zero,function,integer-divide-by-zero,null,object-size,return,shift,signed-integer-overflow,unreachable,unsigned-integer-overflow,vla-bound,vptr
-LIBS=-L. -lloki  -lprofiler -Wl,--eh-frame-hdr   #-fsanitize=address,undefined,alignment,bool,bounds,enum,float-cast-overflow,float-divide-by-zero,function,integer-divide-by-zero,null,object-size,return,shift,signed-integer-overflow,unreachable,unsigned-integer-overflow,vla-bound,vptr
+OPTIONS= -O3 -stdlib=libstdc++ -fno-omit-frame-pointer #-fsanitize=address,undefined,alignment,bool,bounds,enum,float-cast-overflow,float-divide-by-zero,function,integer-divide-by-zero,null,object-size,return,shift,signed-integer-overflow,unreachable,unsigned-integer-overflow,vla-bound,vptr
+LIBS=-L. -lloki    #-fsanitize=address,undefined,alignment,bool,bounds,enum,float-cast-overflow,float-divide-by-zero,function,integer-divide-by-zero,null,object-size,return,shift,signed-integer-overflow,unreachable,unsigned-integer-overflow,vla-bound,vptr
 
 all: $(OBJ)
 	$(CXX) $(OPTIONS) -o a.out $(OBJ) $(LIBS)
