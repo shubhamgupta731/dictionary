@@ -45,15 +45,13 @@ namespace tmb {
    class Node;
    class BaseNodeFeatures;
 
-   template <class A>
+   template <class A, char Index, char Key>
    class NodeObserver : public Observer {
      protected:
-      size_t _index;
-      size_t _key;
       Node<A>* _ptr;
 
      public:
-      NodeObserver(size_t index, size_t key, Node<A>* ptr);
+      NodeObserver(Node<A>* ptr);
       void update();
    };
 
@@ -69,20 +67,22 @@ namespace tmb {
    class BaseFunctorWrapper;
    class BaseNodeFeatures {
      protected:
-      std::vector<std::vector<unsigned> > _vec_dependencies;
       /**
        * @brief name - Name of the variable
        */
       std::string _name;
+      tmb::BaseFunctorWrapper* _vec_functor_wrappers[4];
 #ifdef DEBUG
       std::vector<Loki::Functor<std::vector<std::string> >*>
           _vec_functors_stream;
-      std::vector<tmb::BaseFunctorWrapper*> _vec_functor_wrappers;
       std::vector<std::string> _vec_dependency_name;
       std::vector<std::vector<BaseNodeFeatures*> > _depends_on;
       std::vector<std::vector<std::string> > _vec_subjects;
       std::string _value_set_using;
 #endif
+      char _vec_dependencies_max[4], _vec_dependencies[4];
+      char _active_strategy;
+      char _number_of_strategies;
 
      public:
       void reset_dependencies();
@@ -98,6 +98,7 @@ namespace tmb {
       std::vector<std::vector<std::string> > val_of_functor_wrappers();
       BaseNodeFeatures(const BaseNodeFeatures& copy_from);
       BaseNodeFeatures();
+      virtual ~BaseNodeFeatures();
    };
 
    template <class A>
@@ -111,7 +112,7 @@ namespace tmb {
        * have arguments we will use a functorWrapper which will bind the
        * different arguments to certain variables or to other Nodes
        */
-      std::vector<Loki::Functor<A>*> _vec_functors;
+      Loki::Functor<A>* _vec_functors[4];
 
       /**
        * @brief This functor points to the get_solved function which just
@@ -124,7 +125,7 @@ namespace tmb {
        * is
        *        called.
        */
-      Loki::Functor<A>** _active_get;
+      Loki::Functor<A>* _active_get;
 
       Loki::Functor<A>* _get_copy_func;
       Loki::Functor<A&>* _get_func;
@@ -196,8 +197,9 @@ namespace tmb {
                        Arg2_param arg2,
                        std::string dependency_name = "unknown");
 
-      const std::vector<Loki::Functor<A>*>& get_vec_functors() const;
-      void set_active_strategy(size_t index, size_t key);
+      const Loki::Functor<A>** get_vec_functors() const;
+      template <unsigned char Index, unsigned char Key>
+      void set_active_strategy();
       Node(std::string name);
       Node(const Node<A>& copy_from);
       Loki::Functor<A&>& get_get_func();

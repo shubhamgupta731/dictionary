@@ -3,7 +3,7 @@ OBJ=main.o\
 	 Observer.o \
 	 Node.o
 
-CXX=g++
+CXX=clang++
 
 #OPTIONS=-g -fsanitize=address
 OPTIONS= -O3 -g -fno-omit-frame-pointer #-fsanitize=address,undefined,alignment,bool,bounds,enum,float-cast-overflow,float-divide-by-zero,function,integer-divide-by-zero,null,object-size,return,shift,signed-integer-overflow,unreachable,unsigned-integer-overflow,vla-bound,vptr
