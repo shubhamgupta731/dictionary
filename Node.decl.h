@@ -51,8 +51,10 @@ namespace tmb {
       Node<A>* _ptr;
 
      public:
-      NodeObserver(Node<A>* ptr);
+      NodeObserver(Node<A>* ptr = NULL);
+      NodeObserver(const NodeObserver<A, Index, Key>& copy);
       void update();
+      void copy(const NodeObserver<A, Index, Key>& copy_from);
    };
 
    void draw_nodes(std::ofstream& fs,
@@ -70,9 +72,9 @@ namespace tmb {
       /**
        * @brief name - Name of the variable
        */
-      std::string _name;
-      tmb::BaseFunctorWrapper* _vec_functor_wrappers[4];
+      std::vector<tmb::BaseFunctorWrapper*>* _vec_functor_wrappers;
 #ifdef DEBUG
+      std::string _name;
       std::vector<Loki::Functor<std::vector<std::string> >*>
           _vec_functors_stream;
       std::vector<std::string> _vec_dependency_name;
@@ -81,13 +83,12 @@ namespace tmb {
       std::string _value_set_using;
 #endif
       char _vec_dependencies_max[4], _vec_dependencies[4];
-      char _active_strategy;
       char _number_of_strategies;
 
      public:
       void reset_dependencies();
-      virtual std::string& get_name();
 #ifdef DEBUG
+      virtual std::string& get_name();
       const std::vector<std::vector<std::string> >& vector_of_strings() const;
       const std::vector<std::string>& get_vector_dependencies_name() const;
       const std::vector<std::vector<BaseNodeFeatures*> >& get_dependent_nodes()
@@ -119,24 +120,22 @@ namespace tmb {
        * returns
        *        the value
        */
-      Loki::Functor<A>* _get_solved;
       /**
        * @brief Reference to the functor that will be called when get function
        * is
        *        called.
        */
-      Loki::Functor<A>* _active_get;
 
-      Loki::Functor<A>* _get_copy_func;
-      Loki::Functor<A&>* _get_func;
-      Loki::Functor<const A&>* _get_const_ref_func;
-      Loki::Functor<A*>* _get_pointer_func;
-      Loki::Functor<const A*>* _get_const_pointer_func;
+      //Loki::Functor<A>* _get_copy_func;
+      //Loki::Functor<A&>* _get_func;
+      //Loki::Functor<const A&>* _get_const_ref_func;
+      //Loki::Functor<A*>* _get_pointer_func;
+      //Loki::Functor<const A*>* _get_const_pointer_func;
       /**
        * @brief   This function just returns the value of the variable
        * @return  Value of the variable
        */
-      A& get_solved();
+      A get_solved();
       /**
        * @brief Value of the node
        */
@@ -207,6 +206,7 @@ namespace tmb {
       Loki::Functor<A*>& get_pointer_func();
       Loki::Functor<const A*>& get_const_pointer_func();
       Loki::Functor<A>& get_copy_func();
+      void set_pointer(A* new_ptr);
       operator A();
       ~Node();
       virtual std::string get_val_as_string();

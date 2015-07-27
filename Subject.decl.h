@@ -6,7 +6,7 @@ class Observer;
 
 class Subject {
   protected:
-   Observer *views[4];    // 3. Coupled only to "interface"
+   Observer *views[2];    // 3. Coupled only to "interface"
    char _number_of_views;
 
   public:

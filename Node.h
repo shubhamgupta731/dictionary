@@ -12,9 +12,6 @@
 
 template <class A>
 A& tmb::Node<A>::get() {
-   *_val = (*(_active_get))();
-   _active_get = _get_solved;
-   _active_strategy = -1;
    return *_val;
 }
 
@@ -43,36 +40,24 @@ template <class A>
 template <class B>
 A& tmb::Node<A>::set(B val) {
    *_val = val;
-   _active_get = _get_solved;
 #ifdef DEBUG
    _value_set_using = "using set";
 #endif
    notify();
-   _active_strategy = -1;
    return *_val;
 }
 
 template <class A>
-A& tmb::Node<A>::get_solved() {
+A tmb::Node<A>::get_solved() {
    return *_val;
 }
 
 template <class A>
 tmb::Node<A>::Node(std::string name) {
-   _active_strategy = -1;
    memset(_vec_functors, 0, 4);
-   _name = name;
-   _get_solved = new Loki::Functor<A>(this, &Node<A>::get_solved);
-   _get_func = new Loki::Functor<A&>(this, &tmb::Node<A>::get);
-   _get_copy_func = new Loki::Functor<A>(this, &tmb::Node<A>::get_copy);
-   _get_const_ref_func =
-       new Loki::Functor<const A&>(this, &tmb::Node<A>::get_const_ref);
-   _get_pointer_func = new Loki::Functor<A*>(this, &tmb::Node<A>::get_pointer);
-   _get_const_pointer_func =
-       new Loki::Functor<const A*>(this, &tmb::Node<A>::get_const_pointer);
    _val = new A();
-   _active_get = _get_solved;
 #ifdef DEBUG
+   _name = name;
    _value_set_using = "using set";
 #endif
 }
@@ -81,33 +66,23 @@ template <class A>
 tmb::Node<A>::Node(const tmb::Node<A>& copy_from)
     : BaseNodeFeatures(copy_from) {
    memcpy(_vec_functors, copy_from._vec_functors, _number_of_strategies);
-   _get_solved = new Loki::Functor<A>(this, &Node<A>::get_solved);
-   _get_func = new Loki::Functor<A&>(this, &tmb::Node<A>::get);
-   _get_copy_func = new Loki::Functor<A>(this, &tmb::Node<A>::get_copy);
-   _get_const_ref_func =
-       new Loki::Functor<const A&>(this, &tmb::Node<A>::get_const_ref);
-   _get_pointer_func = new Loki::Functor<A*>(this, &tmb::Node<A>::get_pointer);
-   _get_const_pointer_func =
-       new Loki::Functor<const A*>(this, &tmb::Node<A>::get_const_pointer);
+#ifdef DEBUG
+   _name = copy_from._name;
+#endif
    _val = new A();
    *_val = *(copy_from._val);
-   if (copy_from._active_get == (copy_from._get_solved))
-      _active_get = _get_solved;
-   else
-      _active_get = copy_from._active_get;
 }
 
 template <class A>
 tmb::Node<A>::~Node() {
    delete _val;
-   delete _get_solved;
-   delete _get_func;
-   delete _get_copy_func;
-   delete _get_const_ref_func;
-   delete _get_pointer_func;
-   delete _get_const_pointer_func;
+   // get_pool<Loki::Functor<A&> >().free(_get_func);
+   // get_pool<Loki::Functor<A> >().free(_get_copy_func);
+   // get_pool<Loki::Functor<const A&> >().free(_get_const_ref_func);
+   // get_pool<Loki::Functor<A*> >().free(_get_pointer_func);
+   // get_pool<Loki::Functor<const A*> >().free(_get_const_pointer_func);
    for (unsigned i = 0; i < _number_of_strategies; ++i)
-      delete (_vec_functors[i]);
+      delete _vec_functors[i];
 #ifdef DEBUG
    for (
        typename std::vector<Loki::Functor<std::vector<std::string> >*>::iterator
@@ -116,8 +91,8 @@ tmb::Node<A>::~Node() {
        ++it)
       delete (*it);
    for (std::vector<tmb::BaseFunctorWrapper*>::iterator it =
-            _vec_functor_wrappers.begin();
-        it != _vec_functor_wrappers.end();
+            _vec_functor_wrappers->begin();
+        it != _vec_functor_wrappers->end();
         ++it)
       delete (*it);
 #endif
@@ -289,9 +264,9 @@ namespace tmb {
       struct CreateObserver<A, N, true> {
          template <class Ptr, int I>
          static Observer* doF(Ptr* ptr, int index) {
-            if (index == I)
+            if (index == I) {
                return new tmb::NodeObserver<A, I, N>(ptr);
-            else
+            } else
                return CreateObserver<A, N, (I + 1 < 4)>::template doF<Ptr,
                                                                       I + 1>(
                    ptr, index);
@@ -382,10 +357,10 @@ void tmb::Node<A>::addStrategyMultiple(Loki::Functor<A, ArgList>* functor,
    tmb::Private::SetTupleArgs<ArgList, 0>::doF(tuple_of_args, tuple_args);
 
    tmb::FunctorWrapper<A, ArgList>* wrap =
-       new tmb::FunctorWrapper<A, ArgList>(*functor, tuple_args);
+       new tmb::FunctorWrapper<A, ArgList>(*functor, tuple_args, false);
    _vec_functors[_number_of_strategies] =
        new Loki::Functor<A>(wrap, &tmb::FunctorWrapper<A, ArgList>::return_val);
-   _vec_functor_wrappers[_number_of_strategies] = wrap;
+   _vec_functor_wrappers->push_back(wrap);
    ++_number_of_strategies;
 #ifdef DEBUG
    _vec_functors_stream.push_back(new Loki::Functor<std::vector<std::string> >(
@@ -397,7 +372,7 @@ void tmb::Node<A>::addStrategyMultiple(Loki::Functor<A, ArgList>* functor,
 
    _vec_subjects.back().reserve(Loki::TL::Length<ArgList>::value);
    _depends_on.back().reserve(Loki::TL::Length<ArgList>::value);
-   _vec_functor_wrappers.push_back(wrap);
+   _vec_functor_wrappers->push_back(wrap);
 #endif
 
    //_vec_dependencies.push_back(
@@ -420,7 +395,7 @@ void tmb::Node<A>::addStrategyMultiple(Loki::Functor<A, ArgList>* functor,
        _depends_on.back()
 #endif
        );
-   _active_get = (_vec_functors[_number_of_strategies - 1]);
+   *_val = (*(_vec_functors[_number_of_strategies - 1]))();
 #ifdef DEBUG
    _vec_dependency_name.push_back(dependency_name);
 #endif
@@ -453,6 +428,17 @@ tmb::NodeObserver<A, Index, Key>::NodeObserver(Node<A>* ptr)
     : _ptr(ptr) {}
 
 template <class A, char Index, char Key>
+tmb::NodeObserver<A, Index, Key>::NodeObserver(
+    const tmb::NodeObserver<A, Index, Key>& copy_from)
+    : _ptr(copy_from._ptr) {}
+
+template <class A, char Index, char Key>
+void tmb::NodeObserver<A, Index, Key>::copy(
+    const tmb::NodeObserver<A, Index, Key>& copy_from) {
+   _ptr = copy_from._ptr;
+}
+
+template <class A, char Index, char Key>
 void tmb::NodeObserver<A, Index, Key>::update() {
    _ptr->template set_active_strategy<Index, Key>();
 }
@@ -467,12 +453,11 @@ template <unsigned char Index, unsigned char Key>
 void tmb::Node<A>::set_active_strategy() {
    unsigned char old_res = _vec_dependencies[Index];
    unsigned char res = _vec_dependencies[Index] &= (old_res ^ 1 << Key);
-   if (res == 0 && (_active_strategy - Index)) {
+   if (res == 0) {
 #ifdef DEBUG
       _value_set_using = _vec_dependency_name[Index];
 #endif
-      _active_get = (_vec_functors[Index]);
-      _active_strategy = Index;
+      *_val = (*(_vec_functors[Index]))();
       notify();
    }
 }
@@ -484,27 +469,28 @@ tmb::Node<A>::operator A() {
 
 template <class A>
 Loki::Functor<A&>& tmb::Node<A>::get_get_func() {
-   return *_get_func;
+   return *(new Loki::Functor<A&>(this, &tmb::Node<A>::get));
 }
 
 template <class A>
 Loki::Functor<A>& tmb::Node<A>::get_copy_func() {
-   return *_get_copy_func;
+   return *(new Loki::Functor<A>(this, &tmb::Node<A>::get_copy));
 }
 
 template <class A>
 Loki::Functor<const A&>& tmb::Node<A>::get_const_ref_func() {
-   return *_get_const_ref_func;
+   return *(new Loki::Functor<A>(this, &tmb::Node<A>::get_copy));
 }
 
 template <class A>
 Loki::Functor<A*>& tmb::Node<A>::get_pointer_func() {
-   return *_get_pointer_func;
+   return *(new Loki::Functor<A*>(this, &tmb::Node<A>::get_pointer));
 }
 
 template <class A>
 Loki::Functor<const A*>& tmb::Node<A>::get_const_pointer_func() {
-   return *_get_const_pointer_func;
+   return *(new Loki::Functor<const A*>(this,
+                                        &tmb::Node<A>::get_const_pointer));
 }
 
 template <class A>
@@ -523,5 +509,11 @@ std::string tmb::Node<A>::get_val_as_string() {
    std::stringstream str;
    str << get();
    return str.str();
+}
+
+template <class A>
+void tmb::Node<A>::set_pointer(A* new_ptr) {
+   delete _val;
+   _val = new_ptr;
 }
 #endif

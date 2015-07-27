@@ -3,11 +3,11 @@ OBJ=main.o\
 	 Observer.o \
 	 Node.o
 
-CXX=clang++
+CXX=g++
 
 #OPTIONS=-g -fsanitize=address
-OPTIONS= -O3 -g -fno-omit-frame-pointer #-fsanitize=address,undefined,alignment,bool,bounds,enum,float-cast-overflow,float-divide-by-zero,function,integer-divide-by-zero,null,object-size,return,shift,signed-integer-overflow,unreachable,unsigned-integer-overflow,vla-bound,vptr
-LIBS=-L. -lloki  -lprofiler -Wl,--eh-frame-hdr   #-fsanitize=address,undefined,alignment,bool,bounds,enum,float-cast-overflow,float-divide-by-zero,function,integer-divide-by-zero,null,object-size,return,shift,signed-integer-overflow,unreachable,unsigned-integer-overflow,vla-bound,vptr
+OPTIONS= -O3  -I/home/gupta/software/boost_1_58_0 #-fsanitize=address,undefined,alignment,bool,bounds,enum,float-cast-overflow,float-divide-by-zero,function,integer-divide-by-zero,null,object-size,return,shift,signed-integer-overflow,unreachable,unsigned-integer-overflow,vla-bound,vptr
+LIBS=-L. -lloki -ltcmalloc #-fsanitize=address,undefined,alignment,bool,bounds,enum,float-cast-overflow,float-divide-by-zero,function,integer-divide-by-zero,null,object-size,return,shift,signed-integer-overflow,unreachable,unsigned-integer-overflow,vla-bound,vptr
 
 all: $(OBJ)
 	$(CXX) $(OPTIONS) -o a.out $(OBJ) $(LIBS)

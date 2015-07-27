@@ -3,6 +3,8 @@
 #include "FunctorWrapper.h"
 #include <time.h> /* clock_t, clock, CLOCKS_PER_SEC */
 #include <cmath>
+#define BOOST_POOL_NO_MT
+#include "boost/pool/pool_alloc.hpp"
 
 int return_1() { return 1; }
 
@@ -25,38 +27,40 @@ int main() {
    check = 7;
    // test = wrap;
    // std::cout << "test: " << test << std::endl;
+   std::cout << "sizeof Node: " << sizeof(tmb::Node<Loki::Functor<double> >)
+             << std::endl;
+   std::cout << "sizeof vector: " << sizeof(std::vector<double>) << std::endl;
 
    Loki::SmartPtr<tmb::Node<double> > test_node = new tmb::Node<double>("test");
    std::vector<tmb::Node<double> > int_nodes, test_nodes, int_nodes_1,
        int_nodes_2, int_nodes_3;
    {
-      int_nodes_1.resize(100000, tmb::Node<double>("int_node_1"));
-      int_nodes.resize(100000, tmb::Node<double>("int_node"));
-      int_nodes_2.resize(100000, tmb::Node<double>("int_node_2"));
-      int_nodes_3.resize(100000, tmb::Node<double>("int_node_3"));
-      test_nodes.resize(100000, tmb::Node<double>("test_node"));
+      int_nodes_1.resize(1000000, tmb::Node<double>("int_node_1"));
+      int_nodes.resize(1000000, tmb::Node<double>("int_node"));
+      int_nodes_2.resize(1000000, tmb::Node<double>("int_node_2"));
+      int_nodes_3.resize(1000000, tmb::Node<double>("int_node_3"));
+      test_nodes.resize(1000000, tmb::Node<double>("test_node"));
    }
-   for (size_t i = 0; i < 100000; ++i)
+   for (size_t i = 0; i < 1000000; ++i)
       int_nodes[i].addStrategy<double&>(
           &return_3_func, &int_nodes_1[i], "return_3");
-   for (size_t i = 0; i < 100000; ++i)
+   for (size_t i = 0; i < 1000000; ++i)
       test_nodes[i].addStrategy<double&, double&>(&return_4_func,
                                                   &int_nodes_2[i],
                                                   &int_nodes_3[i],
                                                   "return_4_with_2_3");
-   for (size_t i = 0; i < 100000; ++i)
+   for (size_t i = 0; i < 1000000; ++i)
       test_nodes[i].addStrategy<double&, double&>(
           &return_4_func, &int_nodes[i], &int_nodes_1[i], "return_4");
    clock_t t;
    double sum = 0;
-   for (size_t i = 1; i < 100000; ++i)
+   for (size_t i = 1; i < 1000000; ++i)
       int_nodes_1[i].set(5.0);
-   for (size_t i = 0; i < 100000; ++i)
+   for (size_t i = 0; i < 1000000; ++i)
       int_nodes[i].set(5.0);
    t = clock();
    for (unsigned count = 0; count < 1000; ++count) {
-      for (size_t i = 0; i < 100000; ++i) {
-         int_nodes_1[i].set(5.0+count);
+      for (size_t i = 0; i < 1000000; ++i) {
          sum += test_nodes[i].get();
       }
    }
@@ -66,5 +70,10 @@ int main() {
 #ifdef DEBUG
    tmb::draw_dot_graph(&(test_nodes[0]), 5);
 #endif
+   int_nodes_1.clear();
+   int_nodes.clear();
+   int_nodes_2.clear();
+   int_nodes_3.clear();
+   test_nodes.clear();
    return 0;
 }
