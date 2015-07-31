@@ -57,7 +57,7 @@ flags = [
 '/System/Library/Frameworks/Python.framework/Headers',
 #'-I',
 '-I',
-'/home/gupta/software/boost_1_55_0',
+'/home/gupta/software/boost_1_58_0',
 # This path will only work on OS X, but extra paths that don't exist are not
 # harmful
 '-I',

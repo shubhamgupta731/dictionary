@@ -129,8 +129,8 @@ namespace tmb {
    };
 
    class BaseFunctorWrapper {
-      public:
-         virtual ~BaseFunctorWrapper() {}
+     public:
+      virtual ~BaseFunctorWrapper() {}
    };
    /**
     * @class      : FunctorWrapper
@@ -152,7 +152,7 @@ namespace tmb {
    template <class Return,
              class Tlist = Loki::NullType,
              class PropertiesType = Tlist>
-   struct FunctorWrapper: public BaseFunctorWrapper {
+   struct FunctorWrapper : public BaseFunctorWrapper {
      public:
       /**
        * @brief Pointer to the functor which is being wrapped
@@ -194,10 +194,13 @@ namespace tmb {
       FunctorWrapper(
           Loki::Functor<ResultType, Tlist> &func,
           const Loki::Tuple<typename CreateFunctorPointerList<Tlist>::List> &
-              tuple_functors);
-      FunctorWrapper(const FunctorWrapper &obj);
+              tuple_functors,
+          bool create_copies);
+      FunctorWrapper(const FunctorWrapper &obj, bool create_copies);
 
       FunctorWrapper();
+
+      void copy(const FunctorWrapper &obj, bool create_copies);
 
       template <class Tlist_args, int N>
       struct IterateOverArgs {

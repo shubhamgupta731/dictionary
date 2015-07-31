@@ -435,22 +435,37 @@ namespace tmb {
    FunctorWrapper<Return, Tlist, PropertiesType>::FunctorWrapper(
        Loki::Functor<Return, Tlist>& func,
        const Loki::Tuple<typename CreateFunctorPointerList<Tlist>::List>&
-           tuple_functors)
+           tuple_functors,
+       bool create_copies)
        : _func(&func) {
       // TO ensure there are no memory issues we will make a copy of all
       // the pointers in tuple_functors
-      CopyFunctorPointersFromTuple<Tlist, 0>::template doF<Tlist>(
-          _arg_functors, tuple_functors);
+      if (create_copies)
+         CopyFunctorPointersFromTuple<Tlist, 0>::template doF<Tlist>(
+             _arg_functors, tuple_functors);
+      else
+         _arg_functors = tuple_functors;
       _func_no_args =
           IterateOverArgs<ListArgs, 0>::doF(*this, *_func, _arg_functors);
    }
 
    template <class Return, class Tlist, class PropertiesType>
    FunctorWrapper<Return, Tlist, PropertiesType>::FunctorWrapper(
-       const FunctorWrapper& obj)
-       : _func(obj._func), _func_no_args(obj._func_no_args) {
-      CopyFunctorPointersFromTuple<Tlist, 0>::doF(_arg_functors,
-                                                  obj._arg_functors);
+       const FunctorWrapper& obj, bool create_copies) {
+      copy(obj, create_copies);
+   }
+
+   template <class Return, class Tlist, class PropertiesType>
+   void FunctorWrapper<Return, Tlist, PropertiesType>::copy(
+       const FunctorWrapper& obj, bool create_copies) {
+      _func = obj._func;
+      if (create_copies)
+         CopyFunctorPointersFromTuple<Tlist, 0>::template doF<Tlist>(
+             _arg_functors, obj._arg_functors);
+      else
+         _arg_functors = obj._arg_functors;
+      _func_no_args =
+          IterateOverArgs<ListArgs, 0>::doF(*this, *_func, _arg_functors);
    }
 
    template <class Return, class Tlist, class PropertiesType>

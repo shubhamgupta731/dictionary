@@ -43,18 +43,20 @@ namespace tmb {
    HAS_TYPEDEF(isANode, has_is_a_node);
    template <class A>
    class Node;
+   template <class A>
+   class NodeSetAttributes;
    class BaseNodeFeatures;
 
-   template <class A>
+   template <class A, char Index, char Key>
    class NodeObserver : public Observer {
      protected:
-      size_t _index;
-      size_t _key;
-      Node<A>* _ptr;
+      NodeSetAttributes<A>* _ptr;
 
      public:
-      NodeObserver(size_t index, size_t key, Node<A>* ptr);
+      NodeObserver(NodeSetAttributes<A>* ptr = NULL);
+      NodeObserver(const NodeObserver<A, Index, Key>& copy);
       void update();
+      void copy(const NodeObserver<A, Index, Key>& copy_from);
    };
 
    void draw_nodes(std::ofstream& fs,
@@ -72,22 +74,23 @@ namespace tmb {
       /**
        * @brief name - Name of the variable
        */
-      std::string _name;
+      std::vector<tmb::BaseFunctorWrapper*>* _vec_functor_wrappers;
 #ifdef DEBUG
+      std::string _name;
       std::vector<Loki::Functor<std::vector<std::string> >*>
           _vec_functors_stream;
-      std::vector<tmb::BaseFunctorWrapper*> _vec_functor_wrappers;
       std::vector<std::string> _vec_dependency_name;
       std::vector<std::vector<BaseNodeFeatures*> > _depends_on;
       std::vector<std::vector<std::string> > _vec_subjects;
       std::string _value_set_using;
 #endif
-      std::vector<std::vector<unsigned> > _vec_dependencies;
+      char _vec_dependencies_max[4], _vec_dependencies[4];
+      char _number_of_strategies;
 
      public:
       void reset_dependencies();
-      virtual std::string& get_name();
 #ifdef DEBUG
+      virtual std::string& get_name();
       const std::vector<std::vector<std::string> >& vector_of_strings() const;
       const std::vector<std::string>& get_vector_dependencies_name() const;
       const std::vector<std::vector<BaseNodeFeatures*> >& get_dependent_nodes()
@@ -98,16 +101,18 @@ namespace tmb {
       std::vector<std::vector<std::string> > val_of_functor_wrappers();
       BaseNodeFeatures(const BaseNodeFeatures& copy_from);
       BaseNodeFeatures();
+      virtual ~BaseNodeFeatures();
    };
 
    template <class A>
-   class Node : public Subject, public BaseNodeFeatures {
-     protected:
-      /**
-       * @brief Value of the node
-       */
+   class NodeVal {
+     public:
       A* _val;
+   };
 
+   template <class A>
+   class NodeSetAttributes : public BaseNodeFeatures, public Subject {
+     protected:
       /**
        * @brief Vector of functors which to be used to compute the variable
        *
@@ -116,31 +121,48 @@ namespace tmb {
        * have arguments we will use a functorWrapper which will bind the
        * different arguments to certain variables or to other Nodes
        */
-      std::vector<Loki::Functor<A>*> _vec_functors;
+      Loki::Functor<A>* _vec_functors[4];
+      A* _val;
+
+     public:
+      template <class B>
+      A& set(B val);
+      NodeSetAttributes(std::string name);
+      NodeSetAttributes(const NodeSetAttributes<A>& copy_from);
+      ~NodeSetAttributes();
+
+      template <class ArgList, class TupleArgs>
+      void addStrategyMultiple(Loki::Functor<A, ArgList>* functor,
+                               TupleArgs& tuple_args,
+                               std::string& dependency_name);
+      /**
+       * @brief   Add a strategy which takes one argument
+       */
+      template <class Arg1, class Arg1_param>
+      void addStrategy(Loki::Functor<A, TYPELIST(Arg1)>* functor,
+                       Arg1_param arg1,
+                       std::string dependency_name = "unknown");
 
       /**
-       * @brief This functor points to the get_solved function which just
-       * returns
-       *        the value
+       * @brief   Add a strategy which takes two argument
        */
-      Loki::Functor<A>* _get_solved;
-      /**
-       * @brief Reference to the functor that will be called when get function
-       * is
-       *        called.
-       */
-      Loki::Functor<A>** _active_get;
+      template <class Arg1, class Arg2, class Arg1_param, class Arg2_param>
+      void addStrategy(Loki::Functor<A, TYPELIST(Arg1, Arg2)>* functor,
+                       Arg1_param arg1,
+                       Arg2_param arg2,
+                       std::string dependency_name = "unknown");
+      const Loki::Functor<A>** get_vec_functors() const;
 
-      Loki::Functor<A>* _get_copy_func;
-      Loki::Functor<A&>* _get_func;
-      Loki::Functor<const A&>* _get_const_ref_func;
-      Loki::Functor<A*>* _get_pointer_func;
-      Loki::Functor<const A*>* _get_const_pointer_func;
-      /**
-       * @brief   This function just returns the value of the variable
-       * @return  Value of the variable
-       */
-      A& get_solved();
+      template <unsigned char Index, unsigned char Key>
+      void set_active_strategy();
+      void set_pointer(A* new_ptr);
+   };
+
+   template <class A>
+   class Node {
+     protected:
+      NodeSetAttributes<A>* _set_ptr;
+      NodeVal<A>* _val_ptr;
 
      public:
       typedef Loki::Int2Type<0> isANode;
@@ -175,11 +197,6 @@ namespace tmb {
        */
       template <class B>
       A& set(B bal);
-
-      template <class ArgList, class TupleArgs>
-      void addStrategyMultiple(Loki::Functor<A, ArgList>* functor,
-                               TupleArgs& tuple_args,
-                               std::string& dependency_name);
       /**
        * @brief   Add a strategy which takes one argument
        */
@@ -196,9 +213,6 @@ namespace tmb {
                        Arg1_param arg1,
                        Arg2_param arg2,
                        std::string dependency_name = "unknown");
-
-      const std::vector<Loki::Functor<A>*>& get_vec_functors() const;
-      void set_active_strategy(size_t index, size_t key);
       Node(std::string name);
       Node(const Node<A>& copy_from);
       Loki::Functor<A&>& get_get_func();
@@ -206,6 +220,7 @@ namespace tmb {
       Loki::Functor<A*>& get_pointer_func();
       Loki::Functor<const A*>& get_const_pointer_func();
       Loki::Functor<A>& get_copy_func();
+      void set_pointer(A* new_ptr);
       operator A();
       ~Node();
       virtual std::string get_val_as_string();

@@ -1,28 +1,37 @@
 #include "Node.h"
+#include <cstring>
 
-tmb::BaseNodeFeatures::BaseNodeFeatures() {}
+tmb::BaseNodeFeatures::BaseNodeFeatures() : _number_of_strategies(0) {
+   _vec_functor_wrappers = new std::vector<tmb::BaseFunctorWrapper*>();
+}
 
 tmb::BaseNodeFeatures::BaseNodeFeatures(const tmb::BaseNodeFeatures& copy_from)
-    : _name(copy_from._name)
+    : _number_of_strategies(copy_from._number_of_strategies)
+
 #ifdef DEBUG
     , _vec_functors_stream(copy_from._vec_functors_stream)
     , _value_set_using(copy_from._value_set_using)
 #endif
 {
+   _vec_functor_wrappers = new std::vector<tmb::BaseFunctorWrapper*>();
+   //_name = new std::string(*(copy_from._name));
+}
+
+tmb::BaseNodeFeatures::~BaseNodeFeatures() {
+   // delete _name;
+   for (char i = 0; i < _number_of_strategies; ++i)
+      delete (*_vec_functor_wrappers)[i];
+   delete _vec_functor_wrappers;
 }
 
 void tmb::BaseNodeFeatures::reset_dependencies() {
    typedef std::vector<std::vector<unsigned> > dependencies;
-   for (dependencies::iterator it = _vec_dependencies.begin();
-        it != _vec_dependencies.end();
-        ++it) {
-      std::fill(it->begin(), it->end(), 0);
-   }
+   strncpy(_vec_dependencies, _vec_dependencies_max, 8);
 }
 
+#ifdef DEBUG
 std::string& tmb::BaseNodeFeatures::get_name() { return _name; }
 
-#ifdef DEBUG
 const std::vector<std::vector<std::string> >&
     tmb::BaseNodeFeatures::vector_of_strings() const {
    return _vec_subjects;
