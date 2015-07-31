@@ -108,6 +108,8 @@ namespace tmb {
    class NodeVal {
      public:
       A* _val;
+      NodeVal(const NodeVal<A>& copy_from);
+      NodeVal();
    };
 
    template <class A>

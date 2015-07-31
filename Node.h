@@ -84,12 +84,26 @@ template <class A>
 tmb::Node<A>::Node(const tmb::Node<A>& copy_from) {
    _val_ptr = new NodeVal<A>(*(copy_from._val_ptr));
    _set_ptr = new NodeSetAttributes<A>(*(copy_from._set_ptr));
+   _set_ptr->set_pointer(_val_ptr->_val);
+}
+
+template <class A>
+tmb::NodeVal<A>::NodeVal(const tmb::NodeVal<A>& copy_from) {
+   if (_val)
+      delete _val;
+   _val = new A();
+   *_val = *(copy_from._val);
+}
+
+template <class A>
+tmb::NodeVal<A>::NodeVal() {
+   _val = new A();
 }
 
 template <class A>
 tmb::Node<A>::~Node() {
-   delete _val_ptr;
-   delete _set_ptr;
+   // delete _val_ptr;
+   // delete _set_ptr;
 }
 
 template <class A>
@@ -409,7 +423,7 @@ void tmb::NodeSetAttributes<A>::addStrategyMultiple(
        _vec_subjects.back(),
        _depends_on.back()
 #endif
-       );
+           );
    *_val = (*(_vec_functors[_number_of_strategies - 1]))();
 #ifdef DEBUG
    _vec_dependency_name.push_back(dependency_name);

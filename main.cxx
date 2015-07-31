@@ -60,7 +60,7 @@ int main() {
    for (size_t i = 0; i < 1000000; ++i)
       int_nodes[i].set(5.0);
    t = clock();
-   for (unsigned count = 0; count < 100000; ++count) {
+   for (unsigned count = 0; count < 1000; ++count) {
       for (size_t i = 0; i < 1000000; ++i) {
          sum += *(test_node_ptr[i]);
       }
