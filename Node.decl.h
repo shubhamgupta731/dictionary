@@ -43,15 +43,17 @@ namespace tmb {
    HAS_TYPEDEF(isANode, has_is_a_node);
    template <class A>
    class Node;
+   template <class A>
+   class NodeSetAttributes;
    class BaseNodeFeatures;
 
    template <class A, char Index, char Key>
    class NodeObserver : public Observer {
      protected:
-      Node<A>* _ptr;
+      NodeSetAttributes<A>* _ptr;
 
      public:
-      NodeObserver(Node<A>* ptr = NULL);
+      NodeObserver(NodeSetAttributes<A>* ptr = NULL);
       NodeObserver(const NodeObserver<A, Index, Key>& copy);
       void update();
       void copy(const NodeObserver<A, Index, Key>& copy_from);
@@ -103,7 +105,13 @@ namespace tmb {
    };
 
    template <class A>
-   class Node : public Subject, public BaseNodeFeatures {
+   class NodeVal {
+     public:
+      A* _val;
+   };
+
+   template <class A>
+   class NodeSetAttributes : public BaseNodeFeatures, public Subject {
      protected:
       /**
        * @brief Vector of functors which to be used to compute the variable
@@ -114,32 +122,47 @@ namespace tmb {
        * different arguments to certain variables or to other Nodes
        */
       Loki::Functor<A>* _vec_functors[4];
-
-      /**
-       * @brief This functor points to the get_solved function which just
-       * returns
-       *        the value
-       */
-      /**
-       * @brief Reference to the functor that will be called when get function
-       * is
-       *        called.
-       */
-
-      //Loki::Functor<A>* _get_copy_func;
-      //Loki::Functor<A&>* _get_func;
-      //Loki::Functor<const A&>* _get_const_ref_func;
-      //Loki::Functor<A*>* _get_pointer_func;
-      //Loki::Functor<const A*>* _get_const_pointer_func;
-      /**
-       * @brief   This function just returns the value of the variable
-       * @return  Value of the variable
-       */
-      A get_solved();
-      /**
-       * @brief Value of the node
-       */
       A* _val;
+
+     public:
+      template <class B>
+      A& set(B val);
+      NodeSetAttributes(std::string name);
+      NodeSetAttributes(const NodeSetAttributes<A>& copy_from);
+      ~NodeSetAttributes();
+
+      template <class ArgList, class TupleArgs>
+      void addStrategyMultiple(Loki::Functor<A, ArgList>* functor,
+                               TupleArgs& tuple_args,
+                               std::string& dependency_name);
+      /**
+       * @brief   Add a strategy which takes one argument
+       */
+      template <class Arg1, class Arg1_param>
+      void addStrategy(Loki::Functor<A, TYPELIST(Arg1)>* functor,
+                       Arg1_param arg1,
+                       std::string dependency_name = "unknown");
+
+      /**
+       * @brief   Add a strategy which takes two argument
+       */
+      template <class Arg1, class Arg2, class Arg1_param, class Arg2_param>
+      void addStrategy(Loki::Functor<A, TYPELIST(Arg1, Arg2)>* functor,
+                       Arg1_param arg1,
+                       Arg2_param arg2,
+                       std::string dependency_name = "unknown");
+      const Loki::Functor<A>** get_vec_functors() const;
+
+      template <unsigned char Index, unsigned char Key>
+      void set_active_strategy();
+      void set_pointer(A* new_ptr);
+   };
+
+   template <class A>
+   class Node {
+     protected:
+      NodeSetAttributes<A>* _set_ptr;
+      NodeVal<A>* _val_ptr;
 
      public:
       typedef Loki::Int2Type<0> isANode;
@@ -174,11 +197,6 @@ namespace tmb {
        */
       template <class B>
       A& set(B bal);
-
-      template <class ArgList, class TupleArgs>
-      void addStrategyMultiple(Loki::Functor<A, ArgList>* functor,
-                               TupleArgs& tuple_args,
-                               std::string& dependency_name);
       /**
        * @brief   Add a strategy which takes one argument
        */
@@ -195,10 +213,6 @@ namespace tmb {
                        Arg1_param arg1,
                        Arg2_param arg2,
                        std::string dependency_name = "unknown");
-
-      const Loki::Functor<A>** get_vec_functors() const;
-      template <unsigned char Index, unsigned char Key>
-      void set_active_strategy();
       Node(std::string name);
       Node(const Node<A>& copy_from);
       Loki::Functor<A&>& get_get_func();

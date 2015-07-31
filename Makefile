@@ -3,10 +3,10 @@ OBJ=main.o\
 	 Observer.o \
 	 Node.o
 
-CXX=g++
+CXX=clang++
 
 #OPTIONS=-g -fsanitize=address
-OPTIONS= -O3  -I/home/gupta/software/boost_1_58_0 #-fsanitize=address,undefined,alignment,bool,bounds,enum,float-cast-overflow,float-divide-by-zero,function,integer-divide-by-zero,null,object-size,return,shift,signed-integer-overflow,unreachable,unsigned-integer-overflow,vla-bound,vptr
+OPTIONS= -O0 -g  -I/home/gupta/software/boost_1_58_0 #-fsanitize=address,undefined,alignment,bool,bounds,enum,float-cast-overflow,float-divide-by-zero,function,integer-divide-by-zero,null,object-size,return,shift,signed-integer-overflow,unreachable,unsigned-integer-overflow,vla-bound,vptr
 LIBS=-L. -lloki -ltcmalloc #-fsanitize=address,undefined,alignment,bool,bounds,enum,float-cast-overflow,float-divide-by-zero,function,integer-divide-by-zero,null,object-size,return,shift,signed-integer-overflow,unreachable,unsigned-integer-overflow,vla-bound,vptr
 
 all: $(OBJ)

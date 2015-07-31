@@ -12,7 +12,7 @@
 
 template <class A>
 A& tmb::Node<A>::get() {
-   return *_val;
+   return *(_val_ptr->_val);
 }
 
 template <class A>
@@ -27,8 +27,7 @@ A tmb::Node<A>::get_copy() {
 
 template <class A>
 A* tmb::Node<A>::get_pointer() {
-   get();
-   return _val;
+   return &get();
 }
 
 template <class A>
@@ -38,7 +37,7 @@ const A* tmb::Node<A>::get_const_pointer() {
 
 template <class A>
 template <class B>
-A& tmb::Node<A>::set(B val) {
+A& tmb::NodeSetAttributes<A>::set(B val) {
    *_val = val;
 #ifdef DEBUG
    _value_set_using = "using set";
@@ -48,12 +47,13 @@ A& tmb::Node<A>::set(B val) {
 }
 
 template <class A>
-A tmb::Node<A>::get_solved() {
-   return *_val;
+template <class B>
+A& tmb::Node<A>::set(B val) {
+   return _set_ptr->set(val);
 }
 
 template <class A>
-tmb::Node<A>::Node(std::string name) {
+tmb::NodeSetAttributes<A>::NodeSetAttributes(std::string name) {
    memset(_vec_functors, 0, 4);
    _val = new A();
 #ifdef DEBUG
@@ -63,7 +63,14 @@ tmb::Node<A>::Node(std::string name) {
 }
 
 template <class A>
-tmb::Node<A>::Node(const tmb::Node<A>& copy_from)
+tmb::Node<A>::Node(std::string name) {
+   _val_ptr = new NodeVal<A>();
+   _set_ptr = new NodeSetAttributes<A>(name);
+}
+
+template <class A>
+tmb::NodeSetAttributes<A>::NodeSetAttributes(
+    const tmb::NodeSetAttributes<A>& copy_from)
     : BaseNodeFeatures(copy_from) {
    memcpy(_vec_functors, copy_from._vec_functors, _number_of_strategies);
 #ifdef DEBUG
@@ -74,13 +81,20 @@ tmb::Node<A>::Node(const tmb::Node<A>& copy_from)
 }
 
 template <class A>
+tmb::Node<A>::Node(const tmb::Node<A>& copy_from) {
+   _val_ptr = new NodeVal<A>(*(copy_from._val_ptr));
+   _set_ptr = new NodeSetAttributes<A>(*(copy_from._set_ptr));
+}
+
+template <class A>
 tmb::Node<A>::~Node() {
+   delete _val_ptr;
+   delete _set_ptr;
+}
+
+template <class A>
+tmb::NodeSetAttributes<A>::~NodeSetAttributes() {
    delete _val;
-   // get_pool<Loki::Functor<A&> >().free(_get_func);
-   // get_pool<Loki::Functor<A> >().free(_get_copy_func);
-   // get_pool<Loki::Functor<const A&> >().free(_get_const_ref_func);
-   // get_pool<Loki::Functor<A*> >().free(_get_pointer_func);
-   // get_pool<Loki::Functor<const A*> >().free(_get_const_pointer_func);
    for (unsigned i = 0; i < _number_of_strategies; ++i)
       delete _vec_functors[i];
 #ifdef DEBUG
@@ -279,7 +293,7 @@ namespace tmb {
       template <class Head, class Tail, int N>
       struct AddArgObserverAndName<Loki::Typelist<Head, Tail>, N> {
          template <class A, class TupleArgs>
-         static void doF(Node<A>* node_ptr,
+         static void doF(NodeSetAttributes<A>* node_ptr,
                          Loki::Tuple<TupleArgs>& tuple_of_args,
                          unsigned index
 #ifdef DEBUG
@@ -295,8 +309,8 @@ namespace tmb {
                 ArgTypeRaw>::Result ArgType;
             ArgTypeRaw& arg = Loki::Field<N>(tuple_of_args);
             Observer* observer =
-                CreateObserver<A, N, true>::template doF<Node<A>, 0>(node_ptr,
-                                                                     index);
+                CreateObserver<A, N, true>::template doF<NodeSetAttributes<A>,
+                                                         0>(node_ptr, index);
             tmb::AddObserver<Loki::Conversion<ArgType, Subject>::exists>::
                 template doF<ArgTypeRaw>(arg, observer);
 #ifdef DEBUG
@@ -318,7 +332,7 @@ namespace tmb {
       template <class Tail, int N>
       struct AddArgObserverAndName<Loki::Typelist<Tail, Loki::NullType>, N> {
          template <class A, class TupleArgs>
-         static void doF(Node<A>* node_ptr,
+         static void doF(NodeSetAttributes<A>* node_ptr,
                          Loki::Tuple<TupleArgs>& tuple_of_args,
                          unsigned index
 #ifdef DEBUG
@@ -334,8 +348,8 @@ namespace tmb {
                 ArgTypeRaw>::Result ArgType;
             ArgTypeRaw& arg = Loki::Field<N>(tuple_of_args);
             Observer* observer =
-                CreateObserver<A, N, true>::template doF<Node<A>, 0>(node_ptr,
-                                                                     index);
+                CreateObserver<A, N, true>::template doF<NodeSetAttributes<A>,
+                                                         0>(node_ptr, index);
             tmb::AddObserver<Loki::Conversion<ArgType, Subject>::exists>::
                 template doF<ArgTypeRaw>(arg, observer);
 #ifdef DEBUG
@@ -349,9 +363,10 @@ namespace tmb {
 
 template <class A>
 template <class ArgList, class TupleArgs>
-void tmb::Node<A>::addStrategyMultiple(Loki::Functor<A, ArgList>* functor,
-                                       TupleArgs& tuple_of_args,
-                                       std::string& dependency_name) {
+void tmb::NodeSetAttributes<A>::addStrategyMultiple(
+    Loki::Functor<A, ArgList>* functor,
+    TupleArgs& tuple_of_args,
+    std::string& dependency_name) {
    Loki::Tuple<typename tmb::Private::CreateFunctorPointerListFromArgs<
        ArgList>::Result> tuple_args;
    tmb::Private::SetTupleArgs<ArgList, 0>::doF(tuple_of_args, tuple_args);
@@ -406,9 +421,7 @@ template <class Arg1, class Arg2>
 void tmb::Node<A>::addStrategy(Loki::Functor<A, TYPELIST(Arg1)>* functor,
                                Arg2 arg1,
                                std::string dependency_name) {
-   Loki::Tuple<TYPELIST(Arg2)> tuple_of_args;
-   Loki::Field<0>(tuple_of_args) = arg1;
-   addStrategyMultiple(functor, tuple_of_args, dependency_name);
+   _set_ptr->addStrategy(functor, arg1, dependency_name);
 }
 
 template <class A>
@@ -417,6 +430,27 @@ void tmb::Node<A>::addStrategy(Loki::Functor<A, TYPELIST(Arg1, Arg2)>* functor,
                                Arg1_param arg1,
                                Arg2_param arg2,
                                std::string dependency_name) {
+   _set_ptr->addStrategy(functor, arg1, arg2, dependency_name);
+}
+
+template <class A>
+template <class Arg1, class Arg2>
+void tmb::NodeSetAttributes<A>::addStrategy(
+    Loki::Functor<A, TYPELIST(Arg1)>* functor,
+    Arg2 arg1,
+    std::string dependency_name) {
+   Loki::Tuple<TYPELIST(Arg2)> tuple_of_args;
+   Loki::Field<0>(tuple_of_args) = arg1;
+   addStrategyMultiple(functor, tuple_of_args, dependency_name);
+}
+
+template <class A>
+template <class Arg1, class Arg2, class Arg1_param, class Arg2_param>
+void tmb::NodeSetAttributes<A>::addStrategy(
+    Loki::Functor<A, TYPELIST(Arg1, Arg2)>* functor,
+    Arg1_param arg1,
+    Arg2_param arg2,
+    std::string dependency_name) {
    Loki::Tuple<TYPELIST(Arg1_param, Arg2_param)> tuple_of_args;
    Loki::Field<0>(tuple_of_args) = arg1;
    Loki::Field<1>(tuple_of_args) = arg2;
@@ -424,7 +458,7 @@ void tmb::Node<A>::addStrategy(Loki::Functor<A, TYPELIST(Arg1, Arg2)>* functor,
 }
 
 template <class A, char Index, char Key>
-tmb::NodeObserver<A, Index, Key>::NodeObserver(Node<A>* ptr)
+tmb::NodeObserver<A, Index, Key>::NodeObserver(NodeSetAttributes<A>* ptr)
     : _ptr(ptr) {}
 
 template <class A, char Index, char Key>
@@ -444,13 +478,13 @@ void tmb::NodeObserver<A, Index, Key>::update() {
 }
 
 template <class A>
-const Loki::Functor<A>** tmb::Node<A>::get_vec_functors() const {
+const Loki::Functor<A>** tmb::NodeSetAttributes<A>::get_vec_functors() const {
    return _vec_functors;
 }
 
 template <class A>
 template <unsigned char Index, unsigned char Key>
-void tmb::Node<A>::set_active_strategy() {
+void tmb::NodeSetAttributes<A>::set_active_strategy() {
    unsigned char old_res = _vec_dependencies[Index];
    unsigned char res = _vec_dependencies[Index] &= (old_res ^ 1 << Key);
    if (res == 0) {
@@ -512,8 +546,14 @@ std::string tmb::Node<A>::get_val_as_string() {
 }
 
 template <class A>
-void tmb::Node<A>::set_pointer(A* new_ptr) {
-   delete _val;
+void tmb::NodeSetAttributes<A>::set_pointer(A* new_ptr) {
    _val = new_ptr;
+}
+
+template <class A>
+void tmb::Node<A>::set_pointer(A* new_ptr) {
+   delete _val_ptr->_val;
+   _val_ptr->_val = new_ptr;
+   _set_ptr->set_pointer(new_ptr);
 }
 #endif
