@@ -39,6 +39,7 @@
       };                                                              \
       static bool const Result = sizeof(chk<T>(0)) == sizeof(yes);    \
    }
+
 namespace tmb {
    HAS_TYPEDEF(isANode, has_is_a_node);
    template <class A>
@@ -58,6 +59,13 @@ namespace tmb {
       void update();
       void copy(const NodeObserver<A, Index, Key>& copy_from);
    };
+
+   template <class A>
+   void draw_nodes(std::ofstream& fs,
+                   tmb::Node<A>* node,
+                   unsigned levels,
+                   unsigned count,
+                   std::vector<std::string>& dictionary_of_nodes_added);
 
    void draw_nodes(std::ofstream& fs,
                    tmb::BaseNodeFeatures* node,
@@ -89,13 +97,13 @@ namespace tmb {
 
      public:
       void reset_dependencies();
+      virtual std::string get_val_as_string() = 0;
 #ifdef DEBUG
       virtual std::string& get_name();
       const std::vector<std::vector<std::string> >& vector_of_strings() const;
       const std::vector<std::string>& get_vector_dependencies_name() const;
       const std::vector<std::vector<BaseNodeFeatures*> >& get_dependent_nodes()
           const;
-      virtual std::string get_val_as_string() = 0;
       virtual const std::string& get_value_set_using() const;
 #endif
       std::vector<std::vector<std::string> > val_of_functor_wrappers();
@@ -158,6 +166,7 @@ namespace tmb {
       template <unsigned char Index, unsigned char Key>
       void set_active_strategy();
       void set_pointer(A* new_ptr);
+      virtual std::string get_val_as_string();
    };
 
    template <class A>
@@ -207,6 +216,8 @@ namespace tmb {
                        Arg1_param arg1,
                        std::string dependency_name = "unknown");
 
+      virtual std::string& get_name();
+
       /**
        * @brief   Add a strategy which takes two argument
        */
@@ -222,10 +233,11 @@ namespace tmb {
       Loki::Functor<A*>& get_pointer_func();
       Loki::Functor<const A*>& get_const_pointer_func();
       Loki::Functor<A>& get_copy_func();
+      NodeSetAttributes<A>* get_observable();
       void set_pointer(A* new_ptr);
+      void attach(Observer* obs);
       operator A();
       ~Node();
-      virtual std::string get_val_as_string();
    };
 }
 #endif

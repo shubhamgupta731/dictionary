@@ -12,19 +12,12 @@ double return_4(double& check, double& check1) { return check * check1 + 10; }
 
 int main() {
    int check = 5;
-   // Loki::Tuple<LOKI_TYPELIST_1(Loki::Functor<int&>*)> tuple_args;
-   // Loki::Field<0>(tuple_args) = tmb::wrap_var_with_functor<int&>(check);
    Loki::Functor<int, LOKI_TYPELIST_1(int&)> return_2_func(&return_2);
    Loki::Functor<double, LOKI_TYPELIST_1(double&)> return_3_func(&return_3);
    Loki::Functor<double, LOKI_TYPELIST_2(double&, double&)> return_4_func(
        &return_4);
-   // tmb::FunctorWrapper<int, LOKI_TYPELIST_1(int&)> wrap(return_2_func,
-   // tuple_args);
-   // int test = wrap;
-   // std::cout << "test: " << test << std::endl;
+
    check = 7;
-   // test = wrap;
-   // std::cout << "test: " << test << std::endl;
    std::cout << "sizeof Node: " << sizeof(tmb::Node<Loki::Functor<double> >)
              << std::endl;
    std::cout << "sizeof vector: " << sizeof(std::vector<double>) << std::endl;

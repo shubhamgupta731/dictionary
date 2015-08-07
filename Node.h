@@ -55,7 +55,6 @@ A& tmb::Node<A>::set(B val) {
 template <class A>
 tmb::NodeSetAttributes<A>::NodeSetAttributes(std::string name) {
    memset(_vec_functors, 0, 4);
-   _val = new A();
 #ifdef DEBUG
    _name = name;
    _value_set_using = "using set";
@@ -66,6 +65,7 @@ template <class A>
 tmb::Node<A>::Node(std::string name) {
    _val_ptr = new NodeVal<A>();
    _set_ptr = new NodeSetAttributes<A>(name);
+   _set_ptr->set_pointer(_val_ptr->_val);
 }
 
 template <class A>
@@ -76,8 +76,6 @@ tmb::NodeSetAttributes<A>::NodeSetAttributes(
 #ifdef DEBUG
    _name = copy_from._name;
 #endif
-   _val = new A();
-   *_val = *(copy_from._val);
 }
 
 template <class A>
@@ -89,8 +87,6 @@ tmb::Node<A>::Node(const tmb::Node<A>& copy_from) {
 
 template <class A>
 tmb::NodeVal<A>::NodeVal(const tmb::NodeVal<A>& copy_from) {
-   if (_val)
-      delete _val;
    _val = new A();
    *_val = *(copy_from._val);
 }
@@ -101,10 +97,7 @@ tmb::NodeVal<A>::NodeVal() {
 }
 
 template <class A>
-tmb::Node<A>::~Node() {
-   // delete _val_ptr;
-   // delete _set_ptr;
-}
+tmb::Node<A>::~Node() {}
 
 template <class A>
 tmb::NodeSetAttributes<A>::~NodeSetAttributes() {
@@ -112,11 +105,11 @@ tmb::NodeSetAttributes<A>::~NodeSetAttributes() {
    for (unsigned i = 0; i < _number_of_strategies; ++i)
       delete _vec_functors[i];
 #ifdef DEBUG
-   for (
-       typename std::vector<Loki::Functor<std::vector<std::string> >*>::iterator
-           it = _vec_functors_stream.begin();
-       it != _vec_functors_stream.end();
-       ++it)
+   for (typename std::vector<
+            Loki::Functor<std::vector<std::string> >*>::iterator it =
+            _vec_functors_stream.begin();
+        it != _vec_functors_stream.end();
+        ++it)
       delete (*it);
    for (std::vector<tmb::BaseFunctorWrapper*>::iterator it =
             _vec_functor_wrappers->begin();
@@ -206,7 +199,7 @@ namespace tmb {
                       std::vector<std::string>& vec_str,
                       std::vector<BaseNodeFeatures*>& depends_on) {
          vec_str.push_back(arg1->get_name());
-         depends_on.push_back(arg1);
+         depends_on.push_back(arg1->get_observable());
       }
    };
 
@@ -325,10 +318,12 @@ namespace tmb {
             Observer* observer =
                 CreateObserver<A, N, true>::template doF<NodeSetAttributes<A>,
                                                          0>(node_ptr, index);
-            tmb::AddObserver<Loki::Conversion<ArgType, Subject>::exists>::
+            tmb::AddObserver<Loki::Conversion<ArgType, Subject>::exists ||
+                             has_is_a_node<ArgType>::Result>::
                 template doF<ArgTypeRaw>(arg, observer);
 #ifdef DEBUG
-            tmb::AddNodeName<Loki::Conversion<ArgType, Subject>::exists>::
+            tmb::AddNodeName<Loki::Conversion<ArgType, Subject>::exists ||
+                             has_is_a_node<ArgType>::Result>::
                 template doF<ArgTypeRaw>(arg, subject_index, depends_on);
 #endif
             AddArgObserverAndName<Tail, N + 1>::doF(node_ptr,
@@ -364,10 +359,12 @@ namespace tmb {
             Observer* observer =
                 CreateObserver<A, N, true>::template doF<NodeSetAttributes<A>,
                                                          0>(node_ptr, index);
-            tmb::AddObserver<Loki::Conversion<ArgType, Subject>::exists>::
+            tmb::AddObserver<Loki::Conversion<ArgType, Subject>::exists ||
+                             has_is_a_node<ArgType>::Result>::
                 template doF<ArgTypeRaw>(arg, observer);
 #ifdef DEBUG
-            tmb::AddNodeName<Loki::Conversion<ArgType, Subject>::exists>::
+            tmb::AddNodeName<Loki::Conversion<ArgType, Subject>::exists ||
+                             has_is_a_node<ArgType>::Result>::
                 template doF<ArgTypeRaw>(arg, subject_index, depends_on);
 #endif
          }
@@ -445,6 +442,11 @@ void tmb::Node<A>::addStrategy(Loki::Functor<A, TYPELIST(Arg1, Arg2)>* functor,
                                Arg2_param arg2,
                                std::string dependency_name) {
    _set_ptr->addStrategy(functor, arg1, arg2, dependency_name);
+}
+
+template <class A>
+tmb::NodeSetAttributes<A>* tmb::Node<A>::get_observable() {
+   return _set_ptr;
 }
 
 template <class A>
@@ -537,8 +539,8 @@ Loki::Functor<A*>& tmb::Node<A>::get_pointer_func() {
 
 template <class A>
 Loki::Functor<const A*>& tmb::Node<A>::get_const_pointer_func() {
-   return *(new Loki::Functor<const A*>(this,
-                                        &tmb::Node<A>::get_const_pointer));
+   return *(
+       new Loki::Functor<const A*>(this, &tmb::Node<A>::get_const_pointer));
 }
 
 template <class A>
@@ -553,9 +555,9 @@ void tmb::draw_dot_graph(tmb::Node<A>* node, unsigned levels) {
 }
 
 template <class A>
-std::string tmb::Node<A>::get_val_as_string() {
+std::string tmb::NodeSetAttributes<A>::get_val_as_string() {
    std::stringstream str;
-   str << get();
+   str << *_val;
    return str.str();
 }
 
@@ -570,4 +572,27 @@ void tmb::Node<A>::set_pointer(A* new_ptr) {
    _val_ptr->_val = new_ptr;
    _set_ptr->set_pointer(new_ptr);
 }
+
+template <class A>
+void tmb::Node<A>::attach(Observer* obs) {
+   _set_ptr->attach(obs);
+}
+
+#ifdef DEBUG
+template <class A>
+std::string& tmb::Node<A>::get_name() {
+   return _set_ptr->get_name();
+}
+
+template <class A>
+void tmb::draw_nodes(std::ofstream& fs,
+                     tmb::Node<A>* node,
+                     unsigned levels,
+                     unsigned count,
+                     std::vector<std::string>& dictionary_of_nodes_added) {
+   tmb::draw_nodes(
+       fs, node->get_observable(), levels, count, dictionary_of_nodes_added);
+}
+#endif
+
 #endif
