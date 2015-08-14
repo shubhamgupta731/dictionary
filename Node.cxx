@@ -31,6 +31,7 @@ void tmb::BaseNodeFeatures::reset_dependencies() {
 
 #ifdef DEBUG
 std::string& tmb::BaseNodeFeatures::get_name() { return _name; }
+std::string tmb::BaseNodeFeatures::get_name_const() const { return _name; }
 
 const std::vector<std::vector<std::string> >&
     tmb::BaseNodeFeatures::vector_of_strings() const {
