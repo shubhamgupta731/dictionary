@@ -3,6 +3,7 @@
 #include "FunctorWrapper.h"
 #include <time.h> /* clock_t, clock, CLOCKS_PER_SEC */
 #include <cmath>
+#include "Cell.h"
 
 int return_1() { return 1; }
 
@@ -11,13 +12,33 @@ double return_3(double& check) { return check + 10; }
 double return_4(double& check, double& check1) { return check * check1 + 10; }
 
 int main() {
+   tmb::Cell<Loki::Typelist<double, Loki::NullType> > test;
+   test.register_variable<double>(5.0, 2, "pressure", "pressure1");
+   std::cout << test.get_val<double>("pressure") << std::endl;
+   std::cout << test.get_val<double>("pressure1") << std::endl;
+   test.delete_node(0);
+   tmb::Cell<Loki::Typelist<double, Loki::NullType> > copy_test(test);
+   copy_test.set<double>("pressure1", 10.0);
+   copy_test.register_variable<double>(5.0, 1, "temperature");
+   copy_test["pressure1"] = copy_test["temperature"];
+   copy_test["temperature"] += copy_test["pressure1"];
+   copy_test["temperature"] += 1.0;
+   copy_test["test123"] = 1.1;
+   std::cout << copy_test.get_val<double>("pressure1") << std::endl;
+   std::cout << copy_test.get_val<double>("temperature") << std::endl;
+   std::cout << copy_test.get_val<double>("test123") << std::endl;
+   std::cout << copy_test.get_val<double>("pressure") << std::endl;
+   double bla = 1.0 + copy_test["test123"];
+   int test123 = 0 + copy_test["test123"] + copy_test["pressure1"];
+   std::cout << bla << std::endl;
+   std::cout << "test123: " << test123 << std::endl;
+
    int check = 5;
+
    Loki::Functor<int, LOKI_TYPELIST_1(int&)> return_2_func(&return_2);
    Loki::Functor<double, LOKI_TYPELIST_1(double&)> return_3_func(&return_3);
    Loki::Functor<double, LOKI_TYPELIST_2(double&, double&)> return_4_func(
        &return_4);
-
-   check = 7;
    std::cout << "sizeof Node: " << sizeof(tmb::Node<Loki::Functor<double> >)
              << std::endl;
    std::cout << "sizeof vector: " << sizeof(std::vector<double>) << std::endl;

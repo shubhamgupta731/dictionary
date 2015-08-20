@@ -9,9 +9,15 @@
 #include "loki/Typelist.h"
 #include <cstring>
 #include <cassert>
+#include "Helpers.decl.h"
 
 template <class A>
 A& tmb::Node<A>::get() {
+   return *(_val_ptr->_val);
+}
+
+template <class A>
+const A& tmb::Node<A>::get() const {
    return *(_val_ptr->_val);
 }
 
@@ -513,13 +519,9 @@ void tmb::NodeSetAttributes<A>::set_active_strategy() {
 }
 
 template <class A>
-tmb::Node<A>::operator A() {
-   return get();
-}
-
-template <class A>
 Loki::Functor<A&>& tmb::Node<A>::get_get_func() {
-   return *(new Loki::Functor<A&>(this, &tmb::Node<A>::get));
+   return *(new Loki::Functor<A&>(
+       this, static_cast<A& (tmb::Node<A>::*)()>(&tmb::Node<A>::get)));
 }
 
 template <class A>
@@ -554,11 +556,28 @@ void tmb::draw_dot_graph(tmb::Node<A>* node, unsigned levels) {
    fs.close();
 }
 
+namespace tmb {
+   namespace Private {
+      template <class A, bool flag>
+      struct StreamValue {
+         static std::string doF(A* ptr) {
+            std::stringstream str;
+            str << *ptr;
+            return str.str();
+         }
+      };
+      template <class A>
+      struct StreamValue<A, false> {
+         static std::string doF(A* ptr) { return "Not Serializable"; }
+      };
+   }
+}
+
 template <class A>
 std::string tmb::NodeSetAttributes<A>::get_val_as_string() {
-   std::stringstream str;
-   str << *_val;
-   return str.str();
+   return tmb::Private::StreamValue<
+       A,
+       tmb::Private::has_insertion_operator<A>::Result>::doF(_val);
 }
 
 template <class A>
@@ -595,4 +614,9 @@ void tmb::draw_nodes(std::ofstream& fs,
 }
 #endif
 
+template <class A>
+template <class B>
+tmb::Node<A>& tmb::Node<A>::operator=(B val) {
+   set(val);
+}
 #endif

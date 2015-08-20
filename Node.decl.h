@@ -177,11 +177,17 @@ namespace tmb {
 
      public:
       typedef Loki::Int2Type<0> isANode;
+      typedef A Type;
       /**
        * @brief   Calls the functor pointed by _active_get
        * @return  Value of the variable
        */
       A& get();
+      /**
+       * @brief   Calls the functor pointed by _active_get
+       * @return  Value of the variable
+       */
+      const A& get() const;
       /**
        * @brief   Calls the functor pointed by _active_get
        * @return  Value of the variable
@@ -216,7 +222,9 @@ namespace tmb {
                        Arg1_param arg1,
                        std::string dependency_name = "unknown");
 
+#ifdef DEBUG
       virtual std::string& get_name();
+#endif
 
       /**
        * @brief   Add a strategy which takes two argument
@@ -226,7 +234,7 @@ namespace tmb {
                        Arg1_param arg1,
                        Arg2_param arg2,
                        std::string dependency_name = "unknown");
-      Node(std::string name);
+      Node(std::string name = "undefined");
       Node(const Node<A>& copy_from);
       Loki::Functor<A&>& get_get_func();
       Loki::Functor<const A&>& get_const_ref_func();
@@ -236,8 +244,10 @@ namespace tmb {
       NodeSetAttributes<A>* get_observable();
       void set_pointer(A* new_ptr);
       void attach(Observer* obs);
-      operator A();
       ~Node();
+
+      template <class B>
+      Node& operator=(B val);
    };
 }
 #endif

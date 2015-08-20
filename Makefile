@@ -6,7 +6,7 @@ OBJ=main.o\
 CXX=clang++
 
 #OPTIONS=-g -fsanitize=address
-OPTIONS= -O3 -stdlib=libstdc++ -DDEBUG -fno-omit-frame-pointer #-fsanitize=address,bool,enum,integer-divide-by-zero,null,return,shift,signed-integer-overflow,unreachable,,vla-bound
+OPTIONS= -fcolor-diagnostics -O0 -g -stdlib=libstdc++ -fno-omit-frame-pointer #-fsanitize=address,bool,enum,integer-divide-by-zero,null,return,shift,signed-integer-overflow,unreachable,,vla-bound
 LIBS=  -L. -lloki -ltcmalloc #-lc++abi -fsanitize=address,bool,enum,integer-divide-by-zero,null,return,shift,signed-integer-overflow,unreachable,vla-bound
 
 all: $(OBJ)
