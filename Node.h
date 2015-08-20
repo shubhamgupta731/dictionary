@@ -546,6 +546,11 @@ Loki::Functor<const A*>& tmb::Node<A>::get_const_pointer_func() {
 }
 
 template <class A>
+void tmb::draw_dot_graph(tmb::Node<A>* node) {
+   tmb::draw_dot_graph(node, 0);
+}
+
+template <class A>
 void tmb::draw_dot_graph(tmb::Node<A>* node, unsigned levels) {
    std::ofstream fs;
    std::vector<std::string> dictionary_of_nodes_added;

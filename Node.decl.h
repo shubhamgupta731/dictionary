@@ -74,7 +74,10 @@ namespace tmb {
                    std::vector<std::string>& dictionary_of_nodes_added);
 
    template <class A>
-   void draw_dot_graph(tmb::Node<A>* node, unsigned levels = 0);
+   void draw_dot_graph(tmb::Node<A>* node);
+
+   template <class A>
+   void draw_dot_graph(tmb::Node<A>* node, unsigned levels);
 
    class BaseFunctorWrapper;
    class BaseNodeFeatures {
