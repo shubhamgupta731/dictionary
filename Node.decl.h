@@ -95,7 +95,7 @@ namespace tmb {
       std::vector<std::vector<std::string> > _vec_subjects;
       std::string _value_set_using;
 #endif
-      char _vec_dependencies_max[4], _vec_dependencies[4];
+      char _vec_dependencies_max[5], _vec_dependencies[5];
       char _number_of_strategies;
 
      public:

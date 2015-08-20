@@ -48,7 +48,11 @@ A& tmb::NodeSetAttributes<A>::set(B val) {
 #ifdef DEBUG
    _value_set_using = "using set";
 #endif
+   for(unsigned i=0; i<_number_of_strategies; ++i)
+      _vec_dependencies[i] |= 1;
    notify();
+   for(unsigned i=0; i<_number_of_strategies; ++i)
+      _vec_dependencies[i] ^= 1;
    return *_val;
 }
 
@@ -407,13 +411,15 @@ void tmb::NodeSetAttributes<A>::addStrategyMultiple(
    _vec_functor_wrappers->push_back(wrap);
 #endif
 
-   //_vec_dependencies.push_back(
-   //    std::vector<unsigned>(Loki::TL::Length<ArgList>::value, 0));
    char res = 1;
    for (unsigned i = 1; i < Loki::TL::Length<ArgList>::value; ++i) {
       res <<= 1;
       res += 1;
    }
+
+   // To deal with recursive strategy 
+   res <<= 1;
+   res += 0;
 
    _vec_dependencies[_number_of_strategies - 1] = res;
    _vec_dependencies_max[_number_of_strategies - 1] = res;
@@ -508,7 +514,7 @@ template <class A>
 template <unsigned char Index, unsigned char Key>
 void tmb::NodeSetAttributes<A>::set_active_strategy() {
    unsigned char old_res = _vec_dependencies[Index];
-   unsigned char res = _vec_dependencies[Index] &= (old_res ^ 1 << Key);
+   unsigned char res = _vec_dependencies[Index] &= (old_res ^ 1 << (Key + 1));
    if (res == 0) {
 #ifdef DEBUG
       _value_set_using = _vec_dependency_name[Index];

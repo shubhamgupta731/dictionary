@@ -56,6 +56,9 @@ int main() {
       int_nodes[i].addStrategy<double&>(
           &return_3_func, &int_nodes_1[i], "return_3");
    for (size_t i = 0; i < 1000000; ++i)
+      int_nodes_1[i].addStrategy<double&>(
+          &return_3_func, &int_nodes[i], "return_3");
+   for (size_t i = 0; i < 1000000; ++i)
       test_nodes[i].addStrategy<double&, double&>(&return_4_func,
                                                   &int_nodes_2[i],
                                                   &int_nodes_3[i],
