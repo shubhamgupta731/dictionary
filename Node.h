@@ -27,11 +27,6 @@ const A& tmb::Node<A>::get_const_ref() const {
 }
 
 template <class A>
-   const A& tmb::Node<A>::get_const_ref() const {
-   return const_get();
-}
-
-template <class A>
 A tmb::Node<A>::get_copy() {
    return get();
 }
@@ -612,17 +607,6 @@ namespace tmb {
          static std::string doF(A* ptr) { return "Not Serializable"; }
       };
    }
-}
-
-template <class A>
-void tmb::draw_dot_graph(tmb::Node<A>* node, const char *name, unsigned levels) {
-   std::ofstream fs;
-   std::vector<std::string> dictionary_of_nodes_added;
-   fs.open(name);
-   fs << "digraph G {" << std::endl;
-   draw_nodes(fs, node, levels, 0, dictionary_of_nodes_added);
-   fs << "}" << std::endl;
-   fs.close();
 }
 
 template <class A>

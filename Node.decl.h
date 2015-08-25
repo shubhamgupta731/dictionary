@@ -213,11 +213,6 @@ namespace tmb {
        * @brief   Calls the functor pointed by _active_get
        * @return  Value of the variable
        */
-      const A& get_const_ref() const;
-      /**
-       * @brief   Calls the functor pointed by _active_get
-       * @return  Value of the variable
-       */
       A get_copy();
       /**
        * @brief   Calls the functor pointed by _active_get
