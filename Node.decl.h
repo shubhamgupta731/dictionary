@@ -103,6 +103,7 @@ namespace tmb {
       virtual std::string get_val_as_string() = 0;
 #ifdef DEBUG
       virtual std::string& get_name();
+      virtual std::string get_name_const() const;
       const std::vector<std::vector<std::string> >& vector_of_strings() const;
       const std::vector<std::string>& get_vector_dependencies_name() const;
       const std::vector<std::vector<BaseNodeFeatures*> >& get_dependent_nodes()
@@ -164,6 +165,17 @@ namespace tmb {
                        Arg1_param arg1,
                        Arg2_param arg2,
                        std::string dependency_name = "unknown");
+
+      /**
+       * @brief   Add a strategy which takes three argument
+       */
+      template <class Arg1, class Arg2, class Arg3, class Arg1_param, class Arg2_param, class Arg3_param>
+      void addStrategy(Loki::Functor<A, TYPELIST(Arg1, Arg2, Arg3)>* functor,
+                       Arg1_param arg1,
+                       Arg2_param arg2,
+                       Arg3_param arg3,
+                       std::string dependency_name = "unknown");
+
       const Loki::Functor<A>** get_vec_functors() const;
 
       template <unsigned char Index, unsigned char Key>
@@ -186,6 +198,7 @@ namespace tmb {
        * @return  Value of the variable
        */
       A& get();
+
       /**
        * @brief   Calls the functor pointed by _active_get
        * @return  Value of the variable
@@ -195,7 +208,12 @@ namespace tmb {
        * @brief   Calls the functor pointed by _active_get
        * @return  Value of the variable
        */
-      const A& get_const_ref();
+      const A& get_const_ref() const;
+      /**
+       * @brief   Calls the functor pointed by _active_get
+       * @return  Value of the variable
+       */
+      const A& get_const_ref() const;
       /**
        * @brief   Calls the functor pointed by _active_get
        * @return  Value of the variable
@@ -227,6 +245,7 @@ namespace tmb {
 
 #ifdef DEBUG
       virtual std::string& get_name();
+      virtual std::string get_name_const() const;
 #endif
 
       /**
@@ -237,6 +256,17 @@ namespace tmb {
                        Arg1_param arg1,
                        Arg2_param arg2,
                        std::string dependency_name = "unknown");
+
+      /**
+       * @brief   Add a strategy which takes three argument
+       */
+      template <class Arg1, class Arg2, class Arg3, class Arg1_param, class Arg2_param, class Arg3_param>
+      void addStrategy(Loki::Functor<A, TYPELIST(Arg1, Arg2, Arg3)>* functor,
+                       Arg1_param arg1,
+                       Arg2_param arg2,
+                       Arg3_param arg3,
+                       std::string dependency_name = "unknown");
+
       Node(std::string name = "undefined");
       Node(const Node<A>& copy_from);
       Loki::Functor<A&>& get_get_func();

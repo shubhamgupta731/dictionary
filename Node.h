@@ -22,8 +22,13 @@ const A& tmb::Node<A>::get() const {
 }
 
 template <class A>
-const A& tmb::Node<A>::get_const_ref() {
+const A& tmb::Node<A>::get_const_ref() const {
    return get();
+}
+
+template <class A>
+   const A& tmb::Node<A>::get_const_ref() const {
+   return const_get();
 }
 
 template <class A>
@@ -457,6 +462,16 @@ void tmb::Node<A>::addStrategy(Loki::Functor<A, TYPELIST(Arg1, Arg2)>* functor,
 }
 
 template <class A>
+template <class Arg1, class Arg2, class Arg3, class Arg1_param, class Arg2_param, class Arg3_param>
+void tmb::Node<A>::addStrategy(Loki::Functor<A, TYPELIST(Arg1, Arg2, Arg3)>* functor,
+                               Arg1_param arg1,
+                               Arg2_param arg2,
+                               Arg3_param arg3,
+                               std::string dependency_name) {
+   _set_ptr->addStrategy(functor, arg1, arg2, arg3, dependency_name);
+}
+
+template <class A>
 tmb::NodeSetAttributes<A>* tmb::Node<A>::get_observable() {
    return _set_ptr;
 }
@@ -482,6 +497,21 @@ void tmb::NodeSetAttributes<A>::addStrategy(
    Loki::Tuple<TYPELIST(Arg1_param, Arg2_param)> tuple_of_args;
    Loki::Field<0>(tuple_of_args) = arg1;
    Loki::Field<1>(tuple_of_args) = arg2;
+   addStrategyMultiple(functor, tuple_of_args, dependency_name);
+}
+
+template <class A>
+template <class Arg1, class Arg2, class Arg3, class Arg1_param, class Arg2_param, class Arg3_param>
+void tmb::NodeSetAttributes<A>::addStrategy(
+    Loki::Functor<A, TYPELIST(Arg1, Arg2, Arg3)>* functor,
+    Arg1_param arg1,
+    Arg2_param arg2,
+    Arg3_param arg3,
+    std::string dependency_name) {
+   Loki::Tuple<TYPELIST(Arg1_param, Arg2_param, Arg3_param)> tuple_of_args;
+   Loki::Field<0>(tuple_of_args) = arg1;
+   Loki::Field<1>(tuple_of_args) = arg2;
+   Loki::Field<2>(tuple_of_args) = arg3;
    addStrategyMultiple(functor, tuple_of_args, dependency_name);
 }
 
@@ -585,6 +615,17 @@ namespace tmb {
 }
 
 template <class A>
+void tmb::draw_dot_graph(tmb::Node<A>* node, const char *name, unsigned levels) {
+   std::ofstream fs;
+   std::vector<std::string> dictionary_of_nodes_added;
+   fs.open(name);
+   fs << "digraph G {" << std::endl;
+   draw_nodes(fs, node, levels, 0, dictionary_of_nodes_added);
+   fs << "}" << std::endl;
+   fs.close();
+}
+
+template <class A>
 std::string tmb::NodeSetAttributes<A>::get_val_as_string() {
    return tmb::Private::StreamValue<
        A,
@@ -612,6 +653,11 @@ void tmb::Node<A>::attach(Observer* obs) {
 template <class A>
 std::string& tmb::Node<A>::get_name() {
    return _set_ptr->get_name();
+}
+
+template <class A>
+std::string tmb::Node<A>::get_name_const() const {
+   return _set_ptr->get_name_const();
 }
 
 template <class A>
