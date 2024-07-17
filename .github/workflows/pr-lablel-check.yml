@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Check for labels (feature, config-changes, rollout, bugfix, hotfix, non-functional)
+    - name: Check for labels (feature, config-changes, rollout,  bugfix, hotfix, non-functional)
       if: >
         contains(github.event.pull_request.labels.*.name, 'feature') == false &&  
         contains(github.event.pull_request.labels.*.name, 'config-changes') == false && 
@@ -19,4 +19,4 @@ jobs:
         contains(github.event.pull_request.labels.*.name, 'bugfix') == false &&
         contains(github.event.pull_request.labels.*.name, 'hotfix') == false && 
         contains(github.event.pull_request.labels.*.name, 'non-functional') == false 
-            run: exit 1
+      run: exit 1
