@@ -1,15 +1,22 @@
-name: PR Label Checker Workflow
+name: PR Label Checker
 
 on:
   pull_request:
-    types: [opened, labeled, unlabeled, synchronize]
+    branches: 
+    - master
+    types: [ labeled, opened, unlabeled ]
 
 jobs:
   check-labels:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: PR Label Checker
-        uses: TARAAI/PR-Label-Checker@1.0.3
+    - uses: actions/checkout@v4
+    - name: Check for labels (feature, config-changes, rollout,  bugfix, hotfix, non-functional)
+      if: >
+        contains(github.event.pull_request.labels.*.name, 'feature') == false &&  
+        contains(github.event.pull_request.labels.*.name, 'config-changes') == false && 
+        contains(github.event.pull_request.labels.*.name, 'rollout') == false &&
+        contains(github.event.pull_request.labels.*.name, 'bugfix') == false &&
+        contains(github.event.pull_request.labels.*.name, 'hotfix') == false && 
+        contains(github.event.pull_request.labels.*.name, 'non-functional') == false 
+      run: exit 1
