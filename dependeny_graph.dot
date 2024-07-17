@@ -1,0 +1,7 @@
+digraph G {
+0[label="test_node \nvalue: 85",shape="rectangle",style=filled,fillcolor="turquoise"];
+1[label="int_node \nvalue: 15",shape="rectangle",style=filled,fillcolor="turquoise"];
+2[label="int_node_1 \nvalue: 5",shape="rectangle",style=filled,fillcolor="turquoise"];
+0->1;
+0->2;
+}

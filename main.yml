@@ -1,0 +1,40 @@
+# This Github Actions Workflow is intended to add a Warning comment on any PR which commits changes
+# to any property files under config/resources folder in OrderManagementService repository.
+
+# We want to warn the developers committing changes to properties files in OrderManagementService when
+# 1. They raise a PR against master branch
+# 2. When the PR gets merged to the master branch
+
+# @@@@@ Note: for future international launches @@@@@
+# Any international launches in the future can add more sub folders under config/resources folder
+# The current path filter will only cater to properties files that are under the config/resources folder
+# Any folders containing property files getting added in other places in the OrderManagementRepository, should be added to the path filter
+# The paths element under push or pull_request is an array and can accept multiple entries separated by commas
+
+# Author: manichandrakant.velamuri@theporter.in
+
+name: warn-developers-when-committing-to-properties-files-in-oms
+
+# on is a trigger and Controls when the workflow will run
+# This workflow is triggered on push or pull request events but only for the "master" branch
+on:
+  push:
+    branches: [ "master", "main" ]
+    paths: [ "config/resources/**/*" ]
+  pull_request:
+    branches: [ "master", "main" ]
+    paths: [ "config/resources/**/*" ]
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+# our job name is warn-devs
+  warn-devs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: mshick/add-pr-comment@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          message: |
+            :eyes: WARNING - You are committing changes to properties files under the config/resources folder. Please validate if the necessary properties need to be added to all sub-folders under config/resources folder. Failure to validate can cause servers to fail during startup and thereby cause potential business loss. :eyes:
+          allow-repeats: true

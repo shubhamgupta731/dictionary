@@ -1,0 +1,30 @@
+digraph G {
+subgraph Gtest_node {
+test_node[label="test_node \nvalue: 10 \nset using: using set",shape="rectangle",style=filled,fillcolor="turquoise"];
+}subgraph cluster0 {
+style=filled;
+color=grey;
+int_node_2[label="int_node_2 \nvalue: 0 \nset using: using set",shape="rectangle",style=filled,fillcolor="turquoise"];
+test_node->int_node_2[label="return_4_with_2_3"];
+int_node_3[label="int_node_3 \nvalue: 0 \nset using: using set",shape="rectangle",style=filled,fillcolor="turquoise"];
+test_node->int_node_3[label="return_4_with_2_3"];
+}
+subgraph cluster2 {
+style=filled;
+color=grey20;
+int_node[label="int_node \nvalue: 10 \nset using: using set",shape="rectangle",style=filled,fillcolor="turquoise"];
+test_node->int_node[label="return_4"];
+int_node_1[label="int_node_1 \nvalue: 0 \nset using: using set",shape="rectangle",style=filled,fillcolor="turquoise"];
+test_node->int_node_1[label="return_4"];
+}
+subgraph Gint_node_2 {
+}subgraph Gint_node_3 {
+}subgraph Gint_node {
+}subgraph cluster4 {
+style=filled;
+color=grey40;
+int_node->int_node_1[label="return_3"];
+}
+subgraph Gint_node_1 {
+}subgraph Gint_node_1 {
+}}

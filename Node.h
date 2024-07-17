@@ -48,10 +48,10 @@ A& tmb::NodeSetAttributes<A>::set(B val) {
 #ifdef DEBUG
    _value_set_using = "using set";
 #endif
-   for(unsigned i=0; i<_number_of_strategies; ++i)
+   for (unsigned i = 0; i < _number_of_strategies; ++i)
       _vec_dependencies[i] |= 1;
    notify();
-   for(unsigned i=0; i<_number_of_strategies; ++i)
+   for (unsigned i = 0; i < _number_of_strategies; ++i)
       _vec_dependencies[i] ^= 1;
    return *_val;
 }
@@ -227,22 +227,6 @@ namespace tmb {
 
 namespace tmb {
    namespace Private {
-      template <class List>
-      struct CreateFunctorPointerListFromArgs;
-
-      template <class Head, class Tail>
-      struct CreateFunctorPointerListFromArgs<Loki::Typelist<Head, Tail> > {
-         typedef Loki::Typelist<
-             Loki::Functor<Head>*,
-             typename CreateFunctorPointerListFromArgs<Tail>::Result> Result;
-      };
-
-      template <class Tail>
-      struct CreateFunctorPointerListFromArgs<
-          Loki::Typelist<Tail, Loki::NullType> > {
-         typedef Loki::Typelist<Loki::Functor<Tail>*, Loki::NullType> Result;
-      };
-
       template <class List, int N>
       struct SetTupleArgs;
 
@@ -386,14 +370,12 @@ template <class A>
 template <class ArgList, class TupleArgs>
 void tmb::NodeSetAttributes<A>::addStrategyMultiple(
     Loki::Functor<A, ArgList>* functor,
-    TupleArgs& tuple_of_args,
+    Loki::Tuple<typename tmb::Private::CreateFunctorPointerListFromArgs<
+        ArgList>::Result>& tuple_get_functor_of_args,
     std::string& dependency_name) {
-   Loki::Tuple<typename tmb::Private::CreateFunctorPointerListFromArgs<
-       ArgList>::Result> tuple_args;
-   tmb::Private::SetTupleArgs<ArgList, 0>::doF(tuple_of_args, tuple_args);
 
    tmb::FunctorWrapper<A, ArgList>* wrap =
-       new tmb::FunctorWrapper<A, ArgList>(*functor, tuple_args, false);
+       new tmb::FunctorWrapper<A, ArgList>(*functor, tuple_get_functor_of_args, false);
    _vec_functors[_number_of_strategies] =
        new Loki::Functor<A>(wrap, &tmb::FunctorWrapper<A, ArgList>::return_val);
    _vec_functor_wrappers->push_back(wrap);
@@ -417,7 +399,7 @@ void tmb::NodeSetAttributes<A>::addStrategyMultiple(
       res += 1;
    }
 
-   // To deal with recursive strategy 
+   // To deal with recursive strategy
    res <<= 1;
    res += 0;
 
@@ -425,7 +407,7 @@ void tmb::NodeSetAttributes<A>::addStrategyMultiple(
    _vec_dependencies_max[_number_of_strategies - 1] = res;
    tmb::Private::AddArgObserverAndName<ArgList, 0>::doF(
        this,
-       tuple_of_args,
+       tuple_get_functor_of_args,
        _number_of_strategies - 1
 #ifdef DEBUG
        ,
@@ -479,6 +461,10 @@ void tmb::NodeSetAttributes<A>::addStrategy(
     std::string dependency_name) {
    Loki::Tuple<TYPELIST(Arg2)> tuple_of_args;
    Loki::Field<0>(tuple_of_args) = arg1;
+   typedef TYPELIST(Arg1) ArgList;
+   Loki::Tuple<typename tmb::Private::CreateFunctorPointerListFromArgs<
+       ArgList>::Result> tuple_args;
+   tmb::Private::SetTupleArgs<ArgList, 0>::doF(tuple_of_args, tuple_args);
    addStrategyMultiple(functor, tuple_of_args, dependency_name);
 }
 
@@ -492,6 +478,10 @@ void tmb::NodeSetAttributes<A>::addStrategy(
    Loki::Tuple<TYPELIST(Arg1_param, Arg2_param)> tuple_of_args;
    Loki::Field<0>(tuple_of_args) = arg1;
    Loki::Field<1>(tuple_of_args) = arg2;
+   typedef TYPELIST(Arg1, Arg2) ArgList;
+   Loki::Tuple<typename tmb::Private::CreateFunctorPointerListFromArgs<
+       ArgList>::Result> tuple_args;
+   tmb::Private::SetTupleArgs<ArgList, 0>::doF(tuple_of_args, tuple_args);
    addStrategyMultiple(functor, tuple_of_args, dependency_name);
 }
 

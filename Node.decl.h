@@ -7,6 +7,7 @@
 #include "Subject.decl.h"
 #include "Observer.decl.h"
 #include "Typelist.decl.h"
+#include "loki/HierarchyGenerators.h"
 
 /**
  * @class      : HAS_TYPEDEF
@@ -41,6 +42,24 @@
    }
 
 namespace tmb {
+   namespace Private {
+      template <class List>
+      struct CreateFunctorPointerListFromArgs;
+
+      template <class Head, class Tail>
+      struct CreateFunctorPointerListFromArgs<Loki::Typelist<Head, Tail> > {
+         typedef Loki::Typelist<
+             Loki::Functor<Head>*,
+             typename CreateFunctorPointerListFromArgs<Tail>::Result> Result;
+      };
+
+      template <class Tail>
+      struct CreateFunctorPointerListFromArgs<
+          Loki::Typelist<Tail, Loki::NullType> > {
+         typedef Loki::Typelist<Loki::Functor<Tail>*, Loki::NullType> Result;
+      };
+   }
+
    HAS_TYPEDEF(isANode, has_is_a_node);
    template <class A>
    class Node;
@@ -146,9 +165,11 @@ namespace tmb {
       ~NodeSetAttributes();
 
       template <class ArgList, class TupleArgs>
-      void addStrategyMultiple(Loki::Functor<A, ArgList>* functor,
-                               TupleArgs& tuple_args,
-                               std::string& dependency_name);
+      void addStrategyMultiple(
+          Loki::Functor<A, ArgList>* functor,
+          Loki::Tuple<typename tmb::Private::CreateFunctorPointerListFromArgs<
+              ArgList>::Result>& tuple_args,
+          std::string& dependency_name);
       /**
        * @brief   Add a strategy which takes one argument
        */
