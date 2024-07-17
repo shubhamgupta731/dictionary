@@ -19,4 +19,6 @@ jobs:
         contains(github.event.pull_request.labels.*.name, 'bugfix') == false &&
         contains(github.event.pull_request.labels.*.name, 'hotfix') == false && 
         contains(github.event.pull_request.labels.*.name, 'non-functional') == false 
-      run: echo "Error: PR must have one of the following labels: feature, config-changes, rollout, bugfix, hotfix, non-functional" && exit 1
+            run: |
+        echo "Error: PR must have one of the following labels: feature, config-changes, rollout, bugfix, hotfix, non-functional"
+        exit 1
