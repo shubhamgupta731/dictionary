@@ -7,8 +7,7 @@ on:
 jobs:
   check-label:
     runs-on:
-      - self-hosted
-      - k8_runners_small
+      - ubuntu-latest
 
     steps:
       - name: Check if exactly one required label is present
