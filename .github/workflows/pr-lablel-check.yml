@@ -1,24 +1,46 @@
-name: PR Label Checker
+name: PR Label Check
 
 on:
   pull_request:
-    branches: 
-    - master
-    types: [ labeled, opened, unlabeled ]
+    types: [opened, edited, labeled, unlabeled, synchronize]
 
 jobs:
-  check-labels:
-    runs-on: ubuntu-latest
+  check-label:
+    runs-on:
+      - self-hosted
+      - k8_runners_small
+
     steps:
-    - uses: actions/checkout@v4
-    - name: Check for labels (feature, config-changes, rollout,  bugfix, hotfix, non-functional)
-      if: >
-        contains(github.event.pull_request.labels.*.name, 'feature') == false &&  
-        contains(github.event.pull_request.labels.*.name, 'config-changes') == false && 
-        contains(github.event.pull_request.labels.*.name, 'rollout') == false &&
-        contains(github.event.pull_request.labels.*.name, 'bugfix') == false &&
-        contains(github.event.pull_request.labels.*.name, 'hotfix') == false && 
-        contains(github.event.pull_request.labels.*.name, 'non-functional') == false 
-      run: |
-        echo "Error: PR must have one of the following labels: feature, config-changes, rollout, bugfix, hotfix, non-functional"
-        exit 1
+      - name: Check if exactly one required label is present
+        uses: actions/github-script@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          script: |
+            const requiredLabels = [
+              'feature',
+              'non-functional',
+              'config-changes',
+              'rollout',
+              'bugfix',
+              'hotfix'
+            ];
+            const labels = context.payload.pull_request.labels.map(label => label.name);
+            const presentLabels = labels.filter(label => requiredLabels.includes(label));
+
+            if (presentLabels.length !== 1) {
+              const issueNumber = context.payload.pull_request.number;
+              const repoOwner = context.repo.owner;
+              const repoName = context.repo.repo;
+
+              // Add a comment to the PR
+              await github.rest.issues.createComment({
+                owner: repoOwner,
+                repo: repoName,
+                issue_number: issueNumber,
+                body: `This PR has failed the label check because it must have exactly one of the following labels: ${requiredLabels.join(', ')}`
+              });
+
+              throw new Error(`Label check failed because the PR must have exactly one of the following labels: ${requiredLabels.join(', ')}`);
+            }
+
